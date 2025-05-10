@@ -1,0 +1,30 @@
+{
+  "hardhat": {
+    "token": "",
+    "charity": "",
+    "staking": "",
+    "feed": "",
+    "gate": "",
+    "UniswapV2Factory": "",
+    "UniswapV2Router02": ""
+  },
+  "sepolia": {
+    "token": "",
+    "charity": "",
+    "staking": "",
+    "feed": "",
+    "gate": "",
+    "UniswapV2Factory": "0xF62c03E08ada871A0bEb309762E260a7a6a880E6",
+    "UniswapV2Router02": "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3"
+  },
+  "mainnet": {
+    "token": "",
+    "charity": "",
+    "staking": "",
+    "feed": "",
+    "gate": "",
+    "UniswapV2Factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+    "UniswapV2Router02": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+  }
+}
+
