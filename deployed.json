@@ -1,0 +1,32 @@
+{
+  "hardhat": {
+    "token": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "charity": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "staking": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "feed": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+    "gate": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+    "UniswapV2Factory": "",
+    "UniswapV2Router02": "",
+    "weth": "",
+  },
+  "sepolia": {
+    "token": "0xeb7011dFdcBFcCDa41B45cf24C145F265DCBd202",
+    "charity": "0x1aeD0C5E1F77f4520cA758Aff4b2c9C11b7E3c4C",
+    "staking": "0x020F488dAdCE9d880fD4C7D905abE4271e3574aF",
+    "feed": "0x157994a20528Bc9aFD6af57590249933f966a2B0",
+    "gate": "0xF3726C068872b225814b0c330728f3Fc1a01eee6",
+    "UniswapV2Factory": "0xF62c03E08ada871A0bEb309762E260a7a6a880E6",
+    "UniswapV2Router02": "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3",
+    "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "pair": "0x409fDA7bC92CCF8e2311116Fbdf0111EA1A576Aa"
+  },
+  "mainnet": {
+    "token": "",
+    "charity": "",
+    "staking": "",
+    "feed": "",
+    "gate": "",
+    "UniswapV2Factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+    "UniswapV2Router02": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+  }
+}

@@ -16,4 +16,3 @@ states/
 
 .env
 .env.local
-deployed.json
