@@ -1,7 +1,6 @@
 
-
 task("balance", "Retrieve a balance")
-  .addPositionalParam("account", "Owner address", "0x67e4cBa2F5BCDAF131033180Bc45C1E60dc8224c")
+  .addPositionalParam("account", "Owner address", process.env.WALLET_ADDRESS)
   .setAction(async (args, hre) => {
 
     const wallet = args.account;
@@ -24,6 +23,5 @@ task("balance", "Retrieve a balance")
     ]);
     console.log(`💰 Token: ${name} (${symbol})`);
     console.log(`   Your Balance: ${ethers.formatEther(await Token.balanceOf(wallet))} PETAI\n`);
-  
   
   });

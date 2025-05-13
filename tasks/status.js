@@ -26,7 +26,7 @@ task("status", "Get summery stats")
       token.name(),
       token.symbol(),
       token.totalSupply(),
-      token.balanceOf(enzo.address),
+      token.balanceOf(signer.address),
     ]);
     console.log(`💰 Token: ${name} (${symbol})`);
     console.log(`   Total Supply: ${ethers.formatEther(supply)} PETAI`);

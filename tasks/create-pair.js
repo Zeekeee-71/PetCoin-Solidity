@@ -1,32 +1,26 @@
+const addressesFor = require("../lib/addresses");
+const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
+
 task("create-pair", "Creates the PETAI/WETH pair on Uniswap")
   .setAction(async ({ weth }, hre) => {
-    const fs = require("fs");
-    const path = require("path");
     const { ethers } = hre;
+    const deployed = addressesFor(hre.network.name);
 
-    const deployedPath = path.join(__dirname, "..", "deployed.json");
-    const deployedRaw = fs.readFileSync(deployedPath, "utf8");
-    const deployed = JSON.parse(deployedRaw)[hre.network.name];
+    const factory = await ethers.getContractAt(factoryV2ABI, deployed.UniswapV2Factory);
+    //const token = await ethers.getContractAt("PetCoinAI", deployed.token;
+    //const weth = await ethers.getContractAt("IWETH", deployed.weth);
 
-    const IUniswapV2FactoryABI = [
-      "function createPair(address tokenA, address tokenB) external returns (address pair)",
-      "function getPair(address tokenA, address tokenB) external view returns (address pair)"
-    ];
-
-    const factory = await ethers.getContractAt(IUniswapV2FactoryABI, deployed.UniswapV2Factory);
-    const token = deployed.token;
-
-    const pair = await factory.getPair(token, deployed.weth);
+    const pair = await factory.getPair(deployed.token, deployed.weth);
     if (pair !== ethers.ZeroAddress) {
       console.log("Pair already exists:", pair);
       return;
     }
 
-    const tx = await factory.createPair(token, deployed.weth);
+    const tx = await factory.createPair(deployed.token, deployed.weth);
     const receipt = await tx.wait();
     console.log("Pair created. Tx hash:", receipt.transactionHash);
 
-    const newPair = await factory.getPair(token, deployed.weth);
+    const newPair = await factory.getPair(deployed.token, deployed.weth);
     console.log("New pair address:", newPair);
     // Save it into deployed.json
 
