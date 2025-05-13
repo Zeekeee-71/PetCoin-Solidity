@@ -55,7 +55,8 @@ task("swap-in", "Swap WETH for PETAI using fee-on-transfer-safe method")
         0, // accept any amount of PETAI
         [deployed.weth, deployed.token],
         signer,
-        deadline
+        deadline,
+        {gasLimit: 25000000}
       );
     
       const receipt = await tx.wait();

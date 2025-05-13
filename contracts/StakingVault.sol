@@ -9,10 +9,6 @@ interface IPetToken {
     function charityVault() external view returns (address);
 }
 
-interface ICharityVault {
-    function receiveFee(uint256 amount) external;
-}
-
 contract StakingVault is Ownable, ReentrancyGuard {
     IERC20 public immutable petToken;
 
@@ -46,7 +42,6 @@ contract StakingVault is Ownable, ReentrancyGuard {
     address[] public stakerList;
 
     uint256 public totalStaked;
-    uint256 public totalFunded;
     bool public stakingPaused = false;
     uint256 public earlyWithdrawPenalty = 1000; // 10% penalty
     bool public isFinalized = false;
@@ -54,7 +49,6 @@ contract StakingVault is Ownable, ReentrancyGuard {
     event Staked(address indexed user, uint256 stakeId, uint256 amount, uint256 duration, uint256 rewardRate);
     event Claimed(address indexed user, uint256 stakeId, uint256 reward);
     event EarlyWithdrawn(address indexed user, uint256 stakeId, uint256 penaltyAmount);
-    event VaultFunded(uint256 amount);
     event StakingPaused(bool paused);
     event PenaltyUpdated(uint256 newPenalty);
     event StakingFundsMigrated(address indexed to, uint256 amount);
@@ -101,11 +95,8 @@ contract StakingVault is Ownable, ReentrancyGuard {
         uint256 reward = s.amount * s.rewardRate / 10000;
         uint256 payout = s.amount + reward;
 
-        require(totalFunded >= reward, "Vault underfunded");
-
         s.claimed = true;
         totalStaked -= s.amount;
-        totalFunded -= reward;
 
         require(petToken.transfer(msg.sender, payout), "Payout failed");
         
@@ -127,16 +118,13 @@ contract StakingVault is Ownable, ReentrancyGuard {
         totalStaked -= s.amount;
 
         uint256 toCharity = penalty;
-        ICharityVault cVault = getCharityVault();
+        address charityVault = getCharityVault();
         if (isFinalized) {
-            require(totalFunded >= reward, "Insufficient reserved funds");
-            totalFunded -= reward;
             toCharity += reward;
         }
 
         require(petToken.transfer(msg.sender, refund), "Refund failed");
-        require(petToken.transfer(address(cVault), toCharity), "Penalty transfer failed");
-        cVault.receiveFee(penalty);
+        require(petToken.transfer(charityVault, toCharity), "Penalty transfer failed");
 
         cleanupStaker(msg.sender);
 
@@ -194,27 +182,18 @@ contract StakingVault is Ownable, ReentrancyGuard {
         return (0, 0); // NONE
     }
 
-    function fundVault(uint256 amount) external {
-        require(petToken.transferFrom(msg.sender, address(this), amount), "Funding failed");
-        totalFunded += amount;
-        emit VaultFunded(amount);
-    }
-
-    function receiveFee(uint256 amount) external {
-        require(msg.sender == address(petToken), "Only token contract can fund");
-        totalFunded += amount;
-        emit VaultFunded(amount);
-    }
+    // Deprecated: Remove for mainnet
+    function receiveFee(uint256 amount) external {}
 
     function getVaultStats() external view returns (
         uint256 _totalStaked,
-        uint256 _totalFunded,
         uint256 _earlyWithdrawPenalty,
         address _charityVault,
         bool _stakingPaused
     ) {
-        return (totalStaked, totalFunded, earlyWithdrawPenalty, address(getCharityVault()), stakingPaused);
+        return (totalStaked, earlyWithdrawPenalty, address(getCharityVault()), stakingPaused);
     }
+
 
     function getUserOwed(address user) external view returns (uint256 total) {
         Stake[] storage stakes = userStakes[user];
@@ -275,8 +254,8 @@ contract StakingVault is Ownable, ReentrancyGuard {
         emit StakingFundsMigrated(newVault, transferable);
     }
 
-    function getCharityVault() internal view returns (ICharityVault) {
-        return ICharityVault(IPetToken(address(petToken)).charityVault());
+    function getCharityVault() internal view returns (address) {
+        return IPetToken(address(petToken)).charityVault();
     }
 
     function finalizeVault() internal {

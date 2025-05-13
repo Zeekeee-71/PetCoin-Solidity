@@ -46,8 +46,7 @@ describe("StakingVault", function () {
   
       // Fund vault with enough for both eventual payouts
       const totalRewardEstimate = amt1 * 200n / 10000n + amt2 * 500n / 10000n;
-      await token.approve(stakingVault, totalRewardEstimate + amt1 + amt2);
-      await stakingVault.fundVault(totalRewardEstimate + amt1 + amt2);
+      await token.transfer(stakingVault, totalRewardEstimate + amt1 + amt2);
   
       // Give user1 tokens and approve for staking
       await token.transfer(user1, amt1 + amt2);
@@ -81,8 +80,7 @@ describe("StakingVault", function () {
   
       // Fund vault with estimated payouts
       const funding = amt1 * 200n / 10000n + amt2 * 500n / 10000n + amt1 + amt2;
-      await token.approve(stakingVault, funding);
-      await stakingVault.fundVault(funding);
+      await token.transfer(stakingVault, funding);
   
       await stakingVault.connect(user1).stake(amt1, 1); // 30d
       await stakingVault.connect(user1).stake(amt2, 2); // 90d
@@ -137,8 +135,7 @@ describe("StakingVault", function () {
     it("Allows re-staking after claim and updates stakerList correctly", async () => {
 
       const funding = ethers.parseUnits("5000", 18);
-      await token.approve(stakingVault, funding);
-      await stakingVault.fundVault(funding); // Add rewards
+      await token.transfer(stakingVault, funding); // Add rewards
 
       const stakeAmount = ethers.parseUnits("1000", 18);
     
@@ -224,8 +221,7 @@ describe("StakingVault", function () {
     it("Allows claim after lock period and transfer rewards", async () => {
       const amount = ethers.parseUnits("1000", 18);
       const funding = ethers.parseUnits("100", 18);
-      await token.approve(stakingVault, funding);
-      await stakingVault.fundVault(funding); // Add rewards
+      await token.transfer(stakingVault, funding); // Add rewards
 
       await token.transfer(user1, amount);
       await token.connect(user1).approve(stakingVault, amount);
@@ -244,8 +240,7 @@ describe("StakingVault", function () {
       const totalFunding = stakeAmount + rewardAmount;
     
       // Fund vault
-      await token.approve(stakingVault.target, totalFunding);
-      await stakingVault.fundVault(totalFunding);
+      await token.transfer(stakingVault, totalFunding);
     
       // Stake
       await token.transfer(user1.address, stakeAmount);
@@ -268,8 +263,7 @@ describe("StakingVault", function () {
 
       // Fund vault
       const funding = ethers.parseUnits("5000", 18);
-      await token.approve(stakingVault.target, funding);
-      await stakingVault.fundVault(funding);
+      await token.transfer(stakingVault, funding);
 
       const amount = ethers.parseUnits("1000", 18);
       await token.transfer(user1, amount);
@@ -296,8 +290,7 @@ describe("StakingVault", function () {
     it("Allows early withdraw and apply penalty", async () => {
       const amount = ethers.parseUnits("1000", 18);
       const funding = ethers.parseUnits("100", 18);
-      await token.approve(stakingVault, funding);
-      await stakingVault.fundVault(funding); // Add rewards
+      await token.transfer(stakingVault, funding); // Add rewards
 
       await token.transfer(user1.address, amount);
       await token.connect(user1).approve(stakingVault.target, amount);
@@ -312,8 +305,7 @@ describe("StakingVault", function () {
       const rewardBuffer = ethers.parseUnits("100", 18); // Not needed, but to mirror real flow
     
       // Fund the vault in case any reward is needed
-      await token.approve(stakingVault.target, rewardBuffer);
-      await stakingVault.fundVault(rewardBuffer);
+      await token.transfer(stakingVault, rewardBuffer);
     
       // Give user tokens and stake
       await token.transfer(user1.address, stakeAmount);
@@ -340,8 +332,7 @@ describe("StakingVault", function () {
       const totalFunding = reward + ethers.parseUnits("500", 18); // extra buffer
     
       // Fund the vault
-      await token.approve(stakingVault, totalFunding);
-      await stakingVault.fundVault(totalFunding);
+      await token.transfer(stakingVault, totalFunding);
     
       // Stake
       await token.transfer(user1, stakeAmount);
@@ -383,8 +374,7 @@ describe("StakingVault", function () {
       const funding = totalStake + totalRewards;
   
       // Setup
-      await token.approve(stakingVault.target, funding);
-      await stakingVault.fundVault(funding);
+      await token.transfer(stakingVault, funding);
       await token.transfer(user1, totalStake);
       await token.connect(user1).approve(stakingVault.target, totalStake);
   
@@ -405,11 +395,6 @@ describe("StakingVault", function () {
   });
 
   describe("Vault Funding and Migration", function () {
-    it("Allows funding the vault", async () => {
-      const amount = ethers.parseUnits("500", 18);
-      await token.approve(stakingVault.target, amount);
-      await expect(stakingVault.fundVault(amount)).to.emit(stakingVault, "VaultFunded");
-    });
 
   
     it("Rejects unauthorized caller on StakingVault.migrateTo", async () => {
@@ -432,8 +417,7 @@ describe("StakingVault", function () {
       const totalFunding = reward + buffer;
     
       // Fund + stake in old vault
-      await token.approve(stakingVault, totalFunding);
-      await stakingVault.fundVault(totalFunding);
+      await token.transfer(stakingVault, totalFunding);
       await token.transfer(user1, stakeAmount);
       await token.connect(user1).approve(stakingVault, stakeAmount);
       await stakingVault.connect(user1).stake(stakeAmount, 1);
@@ -461,8 +445,7 @@ describe("StakingVault", function () {
       const funding = stakeAmount + reward;
     
       // Fund and stake in old vault
-      await token.approve(stakingVault.target, funding);
-      await stakingVault.fundVault(funding);
+      await token.transfer(stakingVault, funding);
       await token.transfer(user1, stakeAmount);
       await token.connect(user1).approve(stakingVault.target, stakeAmount);
       await stakingVault.connect(user1).stake(stakeAmount, 1);
@@ -494,6 +477,12 @@ describe("StakingVault", function () {
 
   describe("Admin Controls", function () {
     
+    it("Should allow owner to pause staking", async () => {
+      await expect(
+        stakingVault.pauseStaking(true)
+      ).to.be.not.reverted;
+    });
+
     it("Should only allow owner to pause staking", async () => {
       await expect(
         stakingVault.connect(user1).pauseStaking(true)
@@ -509,19 +498,6 @@ describe("StakingVault", function () {
       // finalizeVault is internal, so this shouldn't even compile or expose ABI,
       expect(typeof stakingVault.finalizeVault).to.equal("undefined");
     });
-    
-    it("Rejects receiveFee if called by unauthorized address", async () => {
-      const amount = ethers.parseUnits("1000", 18);
-    
-      await expect(
-        charityVault.connect(user1).receiveFee(amount)
-      ).to.be.revertedWith("Unauthorized fee sender");
-    
-      await expect(
-        stakingVault.connect(user1).receiveFee(amount)
-      ).to.be.revertedWith("Only token contract can fund");
-    });
-
     
   });
 
@@ -581,8 +557,7 @@ describe("StakingVault", function () {
       const totalFunding = totalReward + buffer;
     
       // Fund and stake
-      await token.approve(stakingVault, totalFunding);
-      await stakingVault.fundVault(totalFunding);
+      await token.transfer(stakingVault, totalFunding);
     
       for (const [user, amount, tier] of [[user1, u1Stake, tier1], [user2, u2Stake, tier2], [user3, u3Stake, tier2]]) {
         await token.transfer(user, amount);

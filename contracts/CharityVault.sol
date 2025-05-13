@@ -22,11 +22,11 @@ contract CharityVault is Ownable {
     event CharityFundsMigrated(address indexed to, uint256 amount);
     event CharitySpent(address indexed recipient, uint256 amount, string memo);
 
-    mapping(address => bool) public tithers;
+    mapping(address => bool) public feeForwarders;
 
     constructor(address _petToken) Ownable(msg.sender) {
         require(_petToken != address(0), "Invalid token address");
-        tithers[_petToken] = true;
+        feeForwarders[_petToken] = true;
         petToken = IERC20(_petToken);
     }
 
@@ -35,15 +35,11 @@ contract CharityVault is Ownable {
         emit VaultFunded(amount);
     }
 
-    function authorizeStakingVault(address _vault) external onlyToken{
-        require(_vault != address(0), "Invalid Vault");
-        tithers[_vault] = true;
-    }
+    // Deprecated: Remove for mainnet deployment.
+    function authorizeStakingVault(address _vault) external onlyToken {}
 
-    function receiveFee(uint256 amount) external {
-        require(tithers[msg.sender] == true, "Unauthorized fee sender");
-        emit VaultFunded(amount);
-    }
+    // Deprecated: Remove for mainnet deployment.
+    function receiveFee(uint256 amount) external {}
 
     /**
      * Spend funds held in the vault for a charitable recipient.

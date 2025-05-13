@@ -11,12 +11,7 @@ describe("CharityVault", function () {
     ({ owner, user1, user2, user3, rest, token, charityVault, stakingVault, gate, feed } = ecosystem);
   });
 
-  it("Rejects unauthorized caller on CharityVault.setStakingVault", async () => {
-    await expect(
-      charityVault.connect(user1).authorizeStakingVault(user2.address)
-    ).to.be.revertedWith("Unauthorized: not token");
-  });
-  
+
   it("Rejects unauthorized caller on CharityVault.migrateTo", async () => {
     await expect(
       charityVault.connect(user1).migrateTo(user2.address)
@@ -46,18 +41,6 @@ describe("CharityVault", function () {
     await expect(
       charityVault.spend(user1.address, tooMuch, memo)
     ).to.be.reverted;
-  });
-
-  it("Rejects receiveFee if called by unauthorized address", async () => {
-    const amount = ethers.parseUnits("1000", 18);
-  
-    await expect(
-      charityVault.connect(user1).receiveFee(amount)
-    ).to.be.revertedWith("Unauthorized fee sender");
-  
-    await expect(
-      stakingVault.connect(user1).receiveFee(amount)
-    ).to.be.revertedWith("Only token contract can fund");
   });
 
 })

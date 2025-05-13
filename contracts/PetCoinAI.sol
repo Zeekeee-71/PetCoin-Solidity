@@ -10,12 +10,14 @@ interface IStakingVault {
     function receiveFee(uint256 amount) external;
     function migrateTo(address newVault) external;
     function setCharityVault(address newCharityVault) external;
+    function setFeeForwarder(address forwarder) external;
 }
 
 interface ICharityVault {
     function receiveFee(uint256 amount) external;
     function migrateTo(address newVault) external;
-    function authorizeStakingVault(address newStakingVault) external;
+    // function authorizeStakingVault(address newStakingVault) external;
+    function setFeeForwarder(address forwarder) external;
 }
 
 contract PetCoinAI is ERC20, Ownable, Pausable {
@@ -59,9 +61,6 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         if(charityVault != address(0) && charityVault != _vault){
             ICharityVault(charityVault).migrateTo(_vault);
         }
-        if(stakingVault != address(0)){
-            ICharityVault(_vault).authorizeStakingVault(stakingVault);
-        }
         if(charityVault != _vault){
             charityVault = _vault;
             isExcludedFromFees[_vault] = true;
@@ -73,9 +72,6 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         require(_vault != address(0), "Invalid staking vault address");
         if(stakingVault != address(0) && stakingVault != _vault){
             IStakingVault(stakingVault).migrateTo(_vault);
-        }
-        if(charityVault != address(0)){
-            ICharityVault(charityVault).authorizeStakingVault(_vault);
         }
         if(stakingVault != _vault){
             stakingVault = _vault;
