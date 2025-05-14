@@ -131,13 +131,15 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         // Transfer charity and rewards directly
         if (charityAmount > 0) {
             super._update(from, charityVault, charityAmount);
-            ICharityVault(charityVault).receiveFee(charityAmount);
+            // Deprecated: remove for mainnet
+            // ICharityVault(charityVault).receiveFee(charityAmount);
             totalCharityDistributed += charityAmount;
         }
 
         if (rewardsAmount > 0) {
             super._update(from, stakingVault, rewardsAmount);
-            IStakingVault(stakingVault).receiveFee(rewardsAmount);
+            // Deprecated: remove for mainnet
+            // IStakingVault(stakingVault).receiveFee(rewardsAmount);
             totalRewardsDistributed += rewardsAmount;
         }
 

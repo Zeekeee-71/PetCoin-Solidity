@@ -26,26 +26,28 @@ task("status", "Get summery stats")
       token.name(),
       token.symbol(),
       token.totalSupply(),
-      token.balanceOf(signer.address),
+      token.balanceOf(signer.address)
     ]);
     console.log(`💰 Token: ${name} (${symbol})`);
     console.log(`   Total Supply: ${ethers.formatEther(supply)} PETAI`);
     console.log(`   Your Balance: ${ethers.formatEther(balance)} PETAI\n`);
   
+    const [charityBal, stakingBal] = await Promise.all([
+      token.balanceOf(charityVault),
+      token.balanceOf(stakingVault),
+    ]);
+
     // === Vault ===
-    const [staked, funded, penalty, receiver, paused] = await stakingVault.getVaultStats();
+    const [staked, penalty, receiver, paused] = await stakingVault.getVaultStats();
     console.log("🏦 Staking Vault:");
     console.log(`   Total Staked: ${ethers.formatEther(staked)} PETAI`);
-    console.log(`   Total Funded: ${ethers.formatEther(funded)} PETAI`);
+    console.log(`   Total Funded: ${ethers.formatEther(stakingBal - staked)} PETAI`);
     console.log(`   Penalty Rate: ${penalty / 100n}%`);
     console.log(`   Penalty Receiver: ${receiver}`);
     console.log(`   Staking Paused: ${paused}\n`);
   
 
-    const [charityBal, stakingBal] = await Promise.all([
-      token.balanceOf(charityVault),
-      token.balanceOf(stakingVault),
-    ]);
+
     console.log("📦 Vaults:");
     console.log(`   Charity: ${ethers.formatEther(charityBal)} PETAI`);
     console.log(`   Staking: ${ethers.formatEther(stakingBal)} PETAI\n`);

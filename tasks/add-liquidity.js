@@ -1,16 +1,19 @@
-const { factoryV2ABI, routerV2ABI } = require("../lib/uniswap");
-
+const addressesFor = require("../lib/addresses");
+const { factoryV2ABI, routerV2ABI } = require("../lib/uniswap")
+;
 task("add-liquidity", "Adds liquidity to the PETAI/WETH pool")
-  .addParam("amountPetai", "Amount of PETAI to add", "10000000000000000000000000000", types.string) // 10,000,000,000 PETAI
-  .addParam("amountWeth", "Amount of WETH to add",              "1000000000000000000", types.string) // 1 WETH
+  .addParam("amountPetai", "Amount of PETAI to add", "1000000", types.string) // 1,000,000 PETAI
+  .addParam("amountWeth", "Amount of WETH to add",              "1", types.string) // 1 WETH
   .setAction(async ({ amountPetai, amountWeth, weth }, hre) => {
+    
+
     const fs = require("fs");
     const path = require("path");
     const { ethers } = hre;
-    const deployedPath = path.join(__dirname, "..", "deployed.json");
-    const deployedRaw = fs.readFileSync(deployedPath, "utf8");
-    const deployed = JSON.parse(deployedRaw)[hre.network.name];
 
+    amountPetai = ethers.parseUnits(amountPetai, 18);
+    amountWeth = ethers.parseUnits(amountWeth, 18);
+    const deployed = addressesFor(hre.network.name);
 
     const [signer] = await ethers.getSigners();
     const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
@@ -22,7 +25,7 @@ task("add-liquidity", "Adds liquidity to the PETAI/WETH pool")
 
     const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
     const tx = await router.addLiquidity(
-      token.target,
+      deployed.token,
       deployed.weth,
       amountPetai,
       amountWeth,

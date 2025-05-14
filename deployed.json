@@ -18,7 +18,7 @@
     "UniswapV2Factory": "0xF62c03E08ada871A0bEb309762E260a7a6a880E6",
     "UniswapV2Router02": "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3",
     "weth": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-    "pair": "0xF979A6A7f0ea8a98e34Dd0045Bd041BCbB619e9D"
+    "pair": "0x409fDA7bC92CCF8e2311116Fbdf0111EA1A576Aa"
   },
   "mainnet": {
     "token": "",
