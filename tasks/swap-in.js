@@ -20,7 +20,7 @@ task("swap-in", "Swap WETH for PETAI using fee-on-transfer-safe method")
 
     const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
 
-    const weth = await ethers.getContractAt("IERC20", deployed.weth);
+    const weth = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
     const petai = await ethers.getContractAt("PetCoinAI", deployed.token);
 
     const wethAmount = ethers.parseEther(amountIn);

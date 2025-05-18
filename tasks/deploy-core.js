@@ -1,4 +1,5 @@
-// return false; // prevent accidental re-deployment
+const addressesFor = require("../lib/addresses");
+const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
 task("deploy-core", "Deploy core contracts")
   .setAction(async (args, hre) => {
@@ -8,10 +9,9 @@ task("deploy-core", "Deploy core contracts")
     const fs = require("fs");
     const path = require("path");
     const network = hre.network.name;
-    const deployedPath = path.join(__dirname, "..", "deployed.json");
-    const deployedRaw = fs.readFileSync(deployedPath, "utf8");
-    const deployed = JSON.parse(deployedRaw)[hre.network.name];
-
+    const deployedPath = path.join(__dirname, "..", "deployed.json"); //  don't use addressFor() here,
+    const deployedRaw = fs.readFileSync(deployedPath, "utf8");        //  we need the path and
+    const deployed = JSON.parse(deployedRaw)[hre.network.name];          //  existing should be overwritten
 
     console.log(`🚀 Deploying contracts from: ${signer.address}`);
 

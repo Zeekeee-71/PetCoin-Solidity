@@ -1,32 +1,34 @@
+const addressesFor = require("../lib/addresses");
+const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
+
 task("deploy-feed", "Deploy UniswapV2PriceFeed and link to AccessGating")
-  .addParam("pair", "Address of the UniswapV2 Pair (PETAI/WETH)")
-  .setAction(async ({ pair }, hre) => {
+  .addOptionalPositionalParam("pair", "Pair address", "")
+  .setAction(async ({pair}, hre) => {
     const { ethers } = hre;
     const fs = require("fs");
     const path = require("path");
 
-    const deployedPath = path.join(__dirname, "..", "deployed.json");
-    const deployedRaw = fs.readFileSync(deployedPath, "utf8");
-    const deployed = JSON.parse(deployedRaw)[hre.network.name];
+    const deployed = addressesFor(hre.network.name);
+
+    if(!(pair || deployed.pair)) {
+      console.error("❌ No pair found. Please deploy the core contracts first.");
+      return;
+    }
+    console.log(`🚀 Deploying UniswapV2PriceFeed to use pair: ${pair || deployed.pair}`);
 
     const Feed = await ethers.getContractFactory("UniswapV2PriceFeed");
-    const feed = await Feed.deploy(pair);
+    const feed = await Feed.deploy(pair || deployed.pair);
     await feed.waitForDeployment();
 
-    console.log("📡 UniswapV2PriceFeed deployed:", await feed.getAddress());
+    console.log("📡 UniswapV2PriceFeed deployed at:", await feed.target);
 
     // Wire it into AccessGating
-    const accessGating = await ethers.getContractAt("AccessGating", deployed.gate);
-    const tx = await accessGating.setPriceFeed(await feed.getAddress());
+    const gate = await ethers.getContractAt("AccessGating", deployed.gate);
+    const tx = await gate.setPriceFeed(feed.target);
     await tx.wait();
 
     console.log("🔗 AccessGating updated to use new price feed.");
 
-    // Save it into deployed.json
-    deployed.feed = await feed.getAddress();
-    const full = JSON.parse(deployedRaw);
-    full[hre.network.name] = deployed;
-    fs.writeFileSync(deployedPath, JSON.stringify(full, null, 2));
+    console.info("✅ Remember to update deployed.json !!!")
 
-    console.log("✅ Updated deployed.json with new price feed.");
   });

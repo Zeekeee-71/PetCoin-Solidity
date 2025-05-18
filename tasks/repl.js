@@ -28,15 +28,15 @@ task("repl", "Launch interactive Hardhat REPL")
       signers,
       // Contracts
       token: await ethers.getContractAt("PetCoinAI", deployed.token, deployer),
-      weth: await ethers.getContractAt("IERC20", deployed.weth, deployer),
+      weth: await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth, deployer),
       charity: await ethers.getContractAt("CharityVault", deployed.charity, deployer),
       staking: await ethers.getContractAt("StakingVault", deployed.staking, deployer),
-      feed: await ethers.getContractAt("MockPriceFeed", deployed.feed, deployer),
+      feed: await ethers.getContractAt("UniswapV2PriceFeed", deployed.feed, deployer),
       gate: await ethers.getContractAt("AccessGating", deployed.gate, deployer), 
       // Uniswap V2
       router: await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02, deployer),
       factory: await ethers.getContractAt(factoryV2ABI, deployed.UniswapV2Factory, deployer),
-      pair: await ethers.getContractAt(pairV2ABI, deployed.UniswapV2Factory, deployer),
+      pair: await ethers.getContractAt(pairV2ABI, deployed.pair, deployer),
       // Utilities
       delay: ms => new Promise(res => setTimeout(res, ms))
     };

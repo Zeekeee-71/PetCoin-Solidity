@@ -19,22 +19,29 @@ task("swap-out", "Swap PETAI for WETH using fee-on-transfer-safe method")
     console.log(`Using signer ${from}: ${signer.address}`);
 
     const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
+    const pair = await ethers.getContractAt(pairV2ABI, deployed.pair);
 
-    const weth = await ethers.getContractAt("IERC20", deployed.weth);
+    const weth = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
     const petai = await ethers.getContractAt("PetCoinAI", deployed.token);
 
     const petAmount = ethers.parseEther(amountIn);
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
     // Approve router to spend PETAI
-    const approval = await petai.connect(signer).approve(router.target, petAmount);
+    const approval = await petai.connect(signer).approve(router.target, petAmount * 2n); /////////////////////////////////
+    const approval2 = await petai.connect(signer).approve(pair.target, petAmount *2n);  /////////////////////////////////
+    
     await approval.wait();
+    await approval2.wait();
 
     const allowance = await petai.connect(signer).allowance(signer.address, router.target);
+    const allowance2 = await petai.connect(signer).allowance(signer.address, pair.target);
 
     console.log(`Allowance to router: ${ethers.formatEther(allowance)} PETAI`);
+    console.log(`Allowance to pair: ${ethers.formatEther(allowance2)} PETAI`);
+
     const petBalance = await petai.connect(signer).balanceOf(signer.address);
-    console.log("PETAI token balance:", ethers.formatEther(petBalance));
+    console.log("PETAI token balance:", ethers.formatEther(petBalance, 18));
     const maxWallet = await petai.maxWalletSize();
     const maxTx = await petai.maxTxSize();
     const userBal = await weth.connect(signer).balanceOf(signer.address);
@@ -50,7 +57,7 @@ task("swap-out", "Swap PETAI for WETH using fee-on-transfer-safe method")
 
     let tx;
     try {
-      tx = await router.connect(signer).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      tx = await router.connect(signer).swapExactTokensForTokensSupportingFeeOnTransferTokens( ///////////////////////////////
         petAmount,
         0, // accept any amount of PETAI
         [deployed.token, deployed.weth],
@@ -63,7 +70,7 @@ task("swap-out", "Swap PETAI for WETH using fee-on-transfer-safe method")
       console.log(`✅ Swap complete. Tx hash: ${receipt.hash}`);
     
       const newBal = await weth.connect(signer).balanceOf(signer.address);
-      console.log(`💰 New WETH balance: ${ethers.formatUnits(newBal, 18)} PETAI`);
+      console.log(`💰 New WETH balance: ${ethers.formatUnits(newBal, 18)} ETH`);
     
     } catch (err) {
       if(!tx){

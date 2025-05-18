@@ -37,9 +37,11 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     uint256 public totalRewardsDistributed;
 
     mapping(address => bool) public isExcludedFromFees;
+    mapping(address => bool) public isExcludedFromLimits;
 
     event FeesTaken(address indexed from, uint256 charity, uint256 burn, uint256 rewards);
-    event ExclusionUpdated(address indexed user, bool isExcluded);
+    event FeeExclusionUpdated(address indexed user, bool isExcluded);
+    event LimitExclusionUpdated(address indexed user, bool isExcluded);
     event StakingVaultUpdated(address newVault);
     event CharityVaultUpdated(address newVault);
 
@@ -48,34 +50,42 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         _mint(msg.sender, initialSupply);
         isExcludedFromFees[msg.sender] = true;
         isExcludedFromFees[address(this)] = true;
-
+        isExcludedFromLimits[msg.sender] = true;
+        isExcludedFromLimits[address(this)] = true;
     }
 
     function excludeFromFees(address account, bool excluded) external onlyOwner {
         isExcludedFromFees[account] = excluded;
-        emit ExclusionUpdated(account, excluded);
+        emit FeeExclusionUpdated(account, excluded);
+    }
+
+    function excludeFromLimits(address account, bool excluded) external onlyOwner {
+        isExcludedFromLimits[account] = excluded;
+        emit LimitExclusionUpdated(account, excluded);
     }
 
     function setCharityVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid charity vault address");
+        isExcludedFromFees[_vault] = true;
+        isExcludedFromLimits[_vault] = true;
         if(charityVault != address(0) && charityVault != _vault){
             ICharityVault(charityVault).migrateTo(_vault);
         }
         if(charityVault != _vault){
             charityVault = _vault;
-            isExcludedFromFees[_vault] = true;
             emit CharityVaultUpdated(charityVault);
         }
     }
 
     function setStakingVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid staking vault address");
+        isExcludedFromFees[_vault] = true;
+        isExcludedFromLimits[_vault] = true;
         if(stakingVault != address(0) && stakingVault != _vault){
             IStakingVault(stakingVault).migrateTo(_vault);
         }
         if(stakingVault != _vault){
             stakingVault = _vault;
-            isExcludedFromFees[_vault] = true;
             emit StakingVaultUpdated(stakingVault);
         }
     }
@@ -93,10 +103,16 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     }
 
     function _isFeeExempt(address from, address to) internal view returns (bool) {
-        return isExcludedFromFees[from] ||
-            isExcludedFromFees[to] ||
-            from == address(0) ||
-            to == address(0);
+        return 
+            isExcludedFromFees[from] 
+            || isExcludedFromFees[to]
+            || from == address(0) 
+            || to == address(0);
+    }
+
+    function _isLimitExempt(address from, address to) internal view returns (bool) {
+        return isExcludedFromLimits[from] 
+            || isExcludedFromLimits[to];
     }
 
     function _update(address from, address to, uint256 amount) internal override whenNotPaused {
@@ -106,9 +122,11 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
             return;
         }
 
-        require(amount <= maxTxSize, "Exceeds max transaction size");
-        if (to != address(0)) {
-            require(balanceOf(to) + amount <= maxWalletSize, "Exceeds max wallet size");
+        if(!_isLimitExempt(from, to)){
+            require(amount <= maxTxSize, "Exceeds max transaction size");
+            if (to != address(0)) {
+                require(balanceOf(to) + amount <= maxWalletSize, "Exceeds max wallet size");
+            }
         }
 
         // Calculate each slice
@@ -119,7 +137,7 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         // Now derive feeAmount exactly
         uint256 feeAmount = burnAmount + charityAmount + rewardsAmount;
         uint256 transferAmount = amount - feeAmount;
-
+        
         // Perform net transfer to recipient
         super._update(from, to, transferAmount);
 
@@ -131,15 +149,11 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         // Transfer charity and rewards directly
         if (charityAmount > 0) {
             super._update(from, charityVault, charityAmount);
-            // Deprecated: remove for mainnet
-            // ICharityVault(charityVault).receiveFee(charityAmount);
             totalCharityDistributed += charityAmount;
         }
 
         if (rewardsAmount > 0) {
             super._update(from, stakingVault, rewardsAmount);
-            // Deprecated: remove for mainnet
-            // IStakingVault(stakingVault).receiveFee(rewardsAmount);
             totalRewardsDistributed += rewardsAmount;
         }
 

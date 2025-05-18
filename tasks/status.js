@@ -1,4 +1,4 @@
-
+const addressesFor = require("../lib/addresses");
 
 task("status", "Get summery stats")
   .setAction(async (args, hre) => {
@@ -6,9 +6,7 @@ task("status", "Get summery stats")
     const fs = require("fs");
     const path = require("path");
     const network = hre.network.name;
-    const deployedPath = path.join(__dirname, "..", "deployed.json");
-    const deployedRaw = fs.readFileSync(deployedPath, "utf8");
-    const deployed = JSON.parse(deployedRaw)[hre.network.name];
+    const deployed = addressesFor(network);
 
     console.info("Contract Addresses:", deployed)
   

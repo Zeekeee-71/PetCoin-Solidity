@@ -14,5 +14,7 @@ states/
 *.dbg.json
 *.tsbuildinfo
 
+
+*.og
 .env
 .env.local

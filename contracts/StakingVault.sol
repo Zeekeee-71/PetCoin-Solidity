@@ -183,7 +183,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
     }
 
     // Deprecated: Remove for mainnet
-    function receiveFee(uint256 amount) external {}
+    // function receiveFee(uint256 amount) external {}
 
     function getVaultStats() external view returns (
         uint256 _totalStaked,

@@ -3,26 +3,35 @@ require("@nomicfoundation/hardhat-toolbox");
 
 // Tasks
 
-require("./tasks/repl")
-require("./tasks/deploy-core")
-require("./tasks/create-pair")
-require("./tasks/query-pair")
-require("./tasks/deploy-feed")
-require("./tasks/add-liquidity")
-require("./tasks/remove-liquidity")
-require("./tasks/update-feed")
-require("./tasks/status")
-require("./tasks/balance")
-require("./tasks/lp-balance")
-require("./tasks/exclude")
-require("./tasks/swap-in")
-require("./tasks/swap-out")
+require("./tasks/repl");
+require("./tasks/deploy-core");
+require("./tasks/create-pair");
+require("./tasks/deploy-feed");
+require("./tasks/add-liquidity");
+require("./tasks/remove-liquidity");
+require("./tasks/get-liquidity");
+require("./tasks/update-feed");
+require("./tasks/status");
+require("./tasks/balance");
+require("./tasks/exclude");
+require("./tasks/swap-in");
+require("./tasks/swap-out");
 
-console.info("Hardhat config loaded")
+console.info("Hardhat config loaded");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.28",
+  //solidity: "0.8.28",
+  solidity: {
+    compilers: [
+      { version: "0.5.16",
+        settings: { optimizer: { enabled: true, runs: 200 } } },
+      { version: "0.6.6",
+        settings: { optimizer: { enabled: true, runs: 200 } } },
+      { version: "0.8.28",
+        settings: { optimizer: { enabled: true, runs: 200 } } },
+    ]
+  },
   networks: {
     hardhat: {
       accounts: {

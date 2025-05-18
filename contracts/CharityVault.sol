@@ -39,7 +39,7 @@ contract CharityVault is Ownable {
     function authorizeStakingVault(address _vault) external onlyToken {}
 
     // Deprecated: Remove for mainnet deployment.
-    function receiveFee(uint256 amount) external {}
+    // function receiveFee(uint256 amount) external {}
 
     /**
      * Spend funds held in the vault for a charitable recipient.

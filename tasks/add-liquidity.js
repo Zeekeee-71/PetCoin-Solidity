@@ -18,7 +18,7 @@ task("add-liquidity", "Adds liquidity to the PETAI/WETH pool")
     const [signer] = await ethers.getSigners();
     const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
     const token = await ethers.getContractAt("PetCoinAI", deployed.token);
-    const wethToken = await ethers.getContractAt("IERC20", deployed.weth);
+    const wethToken = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
 
     await token.approve(router.target, amountPetai);
     await wethToken.approve(router.target, amountWeth);

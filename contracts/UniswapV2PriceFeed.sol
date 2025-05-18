@@ -56,7 +56,7 @@ contract UniswapV2PriceFeed is Ownable {
 
     /// @notice Returns the TWAP-scaled price as a uint256 (18 decimals assumed post-scaling)
     function getLatestPrice() external view returns (uint256) {
-        return priceAverageUQ112x112 / (2 ** 112);
+        return (priceAverageUQ112x112 * 1e18) / (2 ** 112);
     }
 
     /// @notice Returns the time (in seconds) since the last TWAP update

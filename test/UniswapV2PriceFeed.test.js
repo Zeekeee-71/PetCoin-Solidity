@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 const { deployEcosystem } = require("./utils/deploy");
+const { ethers } = require("hardhat");
 
 
 describe("UniswapV2PriceFeed (mocked)", function () {
@@ -46,7 +47,7 @@ describe("UniswapV2PriceFeed (mocked)", function () {
     
     const avg = await feed.getLatestPrice();
     // the timestamps don't perfectly match, so there will be a slight error
-    expect(avg).to.be.within(rate - 1, rate + 1); // will usually pass
+    expect(Number(ethers.formatUnits(avg, 18))).to.be.within(rate - 0.01, rate + 0.01); // will usually pass
   });
 
   it("reverts if update() is called too soon", async () => {
