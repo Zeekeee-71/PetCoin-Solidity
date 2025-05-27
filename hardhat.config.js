@@ -42,9 +42,9 @@ module.exports = {
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL,
       accounts: [
-        process.env.PRIVATE_WALLET_KEY, 
-        process.env.PRIVATE_WALLET_KEY2,
-        process.env.PRIVATE_WALLET_KEY3
+        process.env.PRIVATE_WALLET_KEY,  // First key, required
+        process.env.PRIVATE_WALLET_KEY2, // Optional second key
+        process.env.PRIVATE_WALLET_KEY3  // Optional third key
       ],
     },
   },
