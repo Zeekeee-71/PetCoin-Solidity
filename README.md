@@ -85,7 +85,9 @@ SEPOLIA_RPC_URL=https://...
 PRIVATE_WALLET_KEY=0x...
 ```
 
-Then:
+Then: 
+For local development, just use local hardhat node!
+(don't specifiy the network)
 
 ```bash
 npx hardhat deploy-core --network sepolia

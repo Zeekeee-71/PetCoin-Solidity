@@ -175,9 +175,9 @@ contract StakingVault is Ownable, ReentrancyGuard {
     }
 
     function getTierParams(Tier tier) public pure returns (uint256 duration, uint256 rate) {
-        if (tier == Tier.THIRTY) return (30 days, 200);         // 2%
-        if (tier == Tier.NINETY) return (90 days, 500);         // 5%
-        if (tier == Tier.ONE_EIGHTY) return (180 days, 1000);   // 10%
+        if (tier == Tier.THIRTY) return (30 days, 100);         // 1%
+        if (tier == Tier.NINETY) return (90 days, 300);         // 3%
+        if (tier == Tier.ONE_EIGHTY) return (180 days, 700);   // 7%
         if (tier == Tier.THREE_SIXTY_FIVE) return (365 days, 1500); // 15%
         return (0, 0); // NONE
     }

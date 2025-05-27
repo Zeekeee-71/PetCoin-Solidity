@@ -20,7 +20,7 @@ describe("StakingVault", function () {
       await token.connect(user1).approve(stakingVault, amt);
       await expect(stakingVault.connect(user1).stake(amt, 1)) // Tier 30d
         .to.emit(stakingVault, "Staked")
-        .withArgs(user1, 0, amt, 30 * 24 * 60 * 60, 200);
+        .withArgs(user1, 0, amt, 30 * 24 * 60 * 60, 100);
         // msg.sender, stakeId, amount, duration, rate
     });
 
@@ -45,7 +45,7 @@ describe("StakingVault", function () {
       const tier2 = 2; // 90 days
   
       // Fund vault with enough for both eventual payouts
-      const totalRewardEstimate = amt1 * 200n / 10000n + amt2 * 500n / 10000n;
+      const totalRewardEstimate = amt1 * 100n / 10000n + amt2 * 300n / 10000n;
       await token.transfer(stakingVault, totalRewardEstimate + amt1 + amt2);
   
       // Give user1 tokens and approve for staking
@@ -110,24 +110,24 @@ describe("StakingVault", function () {
       expect(await stakingVault.earned(user1, 2)).to.equal(0n);
       expect(await stakingVault.earned(user1, 3)).to.equal(0n);
       await time.increase(31 * 24 * 60 * 60); // 31 days
-      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 200n / 10000n);
+      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 100n / 10000n);
       expect(await stakingVault.earned(user1, 1)).to.equal(0n);
       expect(await stakingVault.earned(user1, 2)).to.equal(0n);
       expect(await stakingVault.earned(user1, 3)).to.equal(0n);
       await time.increase(91 * 24 * 60 * 60); // 91 days
-      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 200n / 10000n);
-      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 500n / 10000n);
+      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 100n / 10000n);
+      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 300n / 10000n);
       expect(await stakingVault.earned(user1, 2)).to.equal(0n);
       expect(await stakingVault.earned(user1, 3)).to.equal(0n);
       await time.increase(91 * 24 * 60 * 60); // 31 days
-      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 200n / 10000n);
-      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 500n / 10000n);
-      expect(await stakingVault.earned(user1, 2)).to.equal((amt / 4n) * 1000n / 10000n);
+      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 100n / 10000n);
+      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 300n / 10000n);
+      expect(await stakingVault.earned(user1, 2)).to.equal((amt / 4n) * 700n / 10000n);
       expect(await stakingVault.earned(user1, 3)).to.equal(0n);
       await time.increase(181 * 24 * 60 * 60); // 31 days
-      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 200n / 10000n);
-      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 500n / 10000n);
-      expect(await stakingVault.earned(user1, 2)).to.equal((amt / 4n) * 1000n / 10000n);    
+      expect(await stakingVault.earned(user1, 0)).to.equal((amt / 4n) * 100n / 10000n);
+      expect(await stakingVault.earned(user1, 1)).to.equal((amt / 4n) * 300n / 10000n);
+      expect(await stakingVault.earned(user1, 2)).to.equal((amt / 4n) * 700n / 10000n);    
       expect(await stakingVault.earned(user1, 3)).to.equal((amt / 4n) * 1500n / 10000n);   
       
     });
@@ -323,7 +323,7 @@ describe("StakingVault", function () {
 
     it("Redirects reward to charity on earlyWithdraw from finalized vault", async () => {
       const stakeAmount = ethers.parseUnits("1000", 18);
-      const rewardRate = 200n; // 2%
+      const rewardRate = 100n; // 1%
       const penaltyRate = 1000n; // 10%
       const reward = stakeAmount * rewardRate / 10000n; // 20 PETAI
       const penalty = stakeAmount * penaltyRate / 10000n; // 100 PETAI
@@ -363,11 +363,11 @@ describe("StakingVault", function () {
 
   describe("User Summary Views", function () {
     it("Returns accurate data for getUserSummary and getUserOwed", async () => {
-      const stake1 = ethers.parseUnits("1000", 18); // Tier 1: 30d @ 2%
-      const stake2 = ethers.parseUnits("3000", 18); // Tier 2: 90d @ 5%
+      const stake1 = ethers.parseUnits("1000", 18); // Tier 1: 30d @ 1%
+      const stake2 = ethers.parseUnits("3000", 18); // Tier 2: 90d @ 3%
   
-      const reward1 = stake1 * 200n / 10000n;
-      const reward2 = stake2 * 500n / 10000n;
+      const reward1 = stake1 * 100n / 10000n;
+      const reward2 = stake2 * 300n / 10000n;
       const totalStake = stake1 + stake2;
       const totalRewards = reward1 + reward2;
   
@@ -412,7 +412,7 @@ describe("StakingVault", function () {
 
     it("Allows claim from old vault after migration and transfers funds correctly", async () => {
       const stakeAmount = ethers.parseUnits("1000", 18);
-      const reward = stakeAmount * 200n / 10000n; // 2% for 30d
+      const reward = stakeAmount * 100n / 10000n; // 1% for 30d
       const buffer = ethers.parseUnits("5000", 18);
       const totalFunding = reward + buffer;
     
@@ -505,9 +505,9 @@ describe("StakingVault", function () {
     it("Returns correct lock durations and reward rates", async () => {
       const expected = [
         [0, 0], // NONE / invalid
-        [30 * 86400, 200],   // Tier 1 (30d, 2%)
-        [90 * 86400, 500],   // Tier 2 (90d, 5%)
-        [180 * 86400, 1000], // Tier 3 (180d, 10%)
+        [30 * 86400, 100],   // Tier 1 (30d, 2%)
+        [90 * 86400, 300],   // Tier 2 (90d, 5%)
+        [180 * 86400, 700], // Tier 3 (180d, 10%)
         [365 * 86400, 1500], // Tier 4 (365d, 15%)
       ];
   
@@ -547,9 +547,9 @@ describe("StakingVault", function () {
       const u3Stake = ethers.parseUnits("3000", 18); // user3: early withdraw
     
       // Calculate all expected rewards
-      const reward1 = u1Stake * 200n / 10000n;
-      const reward2 = u2Stake * 500n / 10000n;
-      const reward3 = u3Stake * 500n / 10000n;
+      const reward1 = u1Stake * 100n / 10000n;
+      const reward2 = u2Stake * 300n / 10000n;
+      const reward3 = u3Stake * 300n / 10000n;
       const totalReward = reward1 + reward2 + reward3;
     
       // Buffer to keep things safe
