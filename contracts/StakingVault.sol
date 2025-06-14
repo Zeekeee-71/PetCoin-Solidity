@@ -4,10 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-interface IPetToken {
-    function charityVault() external view returns (address);
-}
+import "./IPetCoinVaults.sol";
 
 contract StakingVault is Ownable, ReentrancyGuard {
     IERC20 public immutable petToken;
@@ -61,12 +58,10 @@ contract StakingVault is Ownable, ReentrancyGuard {
         petToken = IERC20(_petToken);
     }
 
-    function stake(uint256 amount, Tier tier) external notPaused notFinalized nonReentrant {
+    function stake(uint256 amount, Tier tier) external nonReentrant notPaused notFinalized {
         (uint256 duration, uint256 rate) = getTierParams(tier);
         require(duration > 0, "Invalid tier");
         require(amount > 0, "Amount must be > 0");
-
-        require(petToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         if (!isStaker[msg.sender]) {
             isStaker[msg.sender] = true;
@@ -82,6 +77,8 @@ contract StakingVault is Ownable, ReentrancyGuard {
         }));
 
         totalStaked += amount;
+
+        require(petToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         uint256 stakeId = userStakes[msg.sender].length - 1;
         emit Staked(msg.sender, stakeId, amount, duration, rate);
@@ -255,7 +252,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
     }
 
     function getCharityVault() internal view returns (address) {
-        return IPetToken(address(petToken)).charityVault();
+        return IPetCoinVaults(address(petToken)).charityVault();
     }
 
     function finalizeVault() internal {

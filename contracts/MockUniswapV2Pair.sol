@@ -9,8 +9,8 @@ interface IMinimalUniswapV2Pair {
 }
 
 contract MockUniswapV2Pair is IMinimalUniswapV2Pair {
-  address public token0;
-  address public token1;
+  address immutable token0;
+  address immutable token1;
 
   uint256 public price0CumulativeLast;
   uint256 public price1CumulativeLast;
@@ -19,6 +19,8 @@ contract MockUniswapV2Pair is IMinimalUniswapV2Pair {
   uint32 public blockTimestampLast;
 
   constructor(address _token0, address _token1) {
+    require(_token0 != address(0), "Token0 must be set");
+    require(_token1 != address(0), "Token1 must be set");
     token0 = _token0;
     token1 = _token1;
     blockTimestampLast = uint32(block.timestamp);

@@ -10,14 +10,11 @@ interface IStakingVault {
     function receiveFee(uint256 amount) external;
     function migrateTo(address newVault) external;
     function setCharityVault(address newCharityVault) external;
-    function setFeeForwarder(address forwarder) external;
 }
 
 interface ICharityVault {
     function receiveFee(uint256 amount) external;
     function migrateTo(address newVault) external;
-    // function authorizeStakingVault(address newStakingVault) external;
-    function setFeeForwarder(address forwarder) external;
 }
 
 contract PetCoinAI is ERC20, Ownable, Pausable {
@@ -44,6 +41,8 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     event LimitExclusionUpdated(address indexed user, bool isExcluded);
     event StakingVaultUpdated(address newVault);
     event CharityVaultUpdated(address newVault);
+    event TxLimitUpdated(uint256 txLimit);
+    event WalletLimitUpdated(uint256 walletLimit);
 
     constructor(uint256 initialSupply) ERC20("Pet Coin AI", "PETAI") Ownable(msg.sender) {
         // uint256 initialSupply = 1_000_000_000_000 * 10 ** decimals(); // 1 trillion
@@ -66,40 +65,42 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
 
     function setCharityVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid charity vault address");
+        require(_vault != charityVault, "Same charity vault address");
         isExcludedFromFees[_vault] = true;
         isExcludedFromLimits[_vault] = true;
-        if(charityVault != address(0) && charityVault != _vault){
-            ICharityVault(charityVault).migrateTo(_vault);
+        address prevVault = charityVault;
+        charityVault = _vault;
+        if(address(prevVault) != address(0)){
+            ICharityVault(prevVault).migrateTo(charityVault);
         }
-        if(charityVault != _vault){
-            charityVault = _vault;
-            emit CharityVaultUpdated(charityVault);
-        }
+        emit CharityVaultUpdated(charityVault);
     }
 
     function setStakingVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid staking vault address");
+        require(_vault != stakingVault, "Same staking vault address");
         isExcludedFromFees[_vault] = true;
         isExcludedFromLimits[_vault] = true;
-        if(stakingVault != address(0) && stakingVault != _vault){
-            IStakingVault(stakingVault).migrateTo(_vault);
+        address prevVault = stakingVault;
+        stakingVault = _vault;
+        if(address(prevVault) != address(0)){
+            IStakingVault(prevVault).migrateTo(stakingVault);
         }
-        if(stakingVault != _vault){
-            stakingVault = _vault;
-            emit StakingVaultUpdated(stakingVault);
-        }
+        emit StakingVaultUpdated(stakingVault);
     }
 
     function setWalletLimit(uint256 _maxWallet) external onlyOwner {
         require(_maxWallet > 1_000_000 * 10 ** decimals(), "Maximum wallet size too small");
         require(_maxWallet < 50_000_000_000 * 10 ** decimals(), "Maximum wallet size too large");
         maxWalletSize = _maxWallet;
+        emit WalletLimitUpdated(maxWalletSize);
     }
 
     function setTxLimit(uint256 _maxTx) external onlyOwner {
         require(_maxTx > 1_000_000 * 10 ** decimals(), "Maximum transaction size too small");
         require(_maxTx < 10_000_000_000 * 10 ** decimals(), "Maximum transaction size too large");
         maxTxSize = _maxTx;
+        emit TxLimitUpdated(maxTxSize);
     }
 
     function _isFeeExempt(address from, address to) internal view returns (bool) {

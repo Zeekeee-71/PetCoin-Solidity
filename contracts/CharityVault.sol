@@ -4,11 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IPetToken {
-    function stakingVault() external view returns (address);
-    function charityVault() external view returns (address);
-}
-
 contract CharityVault is Ownable {
     IERC20 public immutable petToken;
 
@@ -34,12 +29,6 @@ contract CharityVault is Ownable {
         require(petToken.transferFrom(msg.sender, address(this), amount), "Funding failed");
         emit VaultFunded(amount);
     }
-
-    // Deprecated: Remove for mainnet deployment.
-    function authorizeStakingVault(address _vault) external onlyToken {}
-
-    // Deprecated: Remove for mainnet deployment.
-    // function receiveFee(uint256 amount) external {}
 
     /**
      * Spend funds held in the vault for a charitable recipient.

@@ -313,46 +313,16 @@ describe("PetCoin AI Token contract", function () {
     expect(await token.totalSupply()).to.be.gte(supplyAfter - maxPossibleBurn);
   });
 
-  it("Does not migrateTo or emit when setStakingVault is called with same address", async () => {
+  it("Reverts when setStakingVault is called with same address", async () => {
     const currentVault = await token.stakingVault();
-  
-    // Spy on migrateTo call
     const StakingVault = await ethers.getContractAt("StakingVault", currentVault);
-    const migrateSpy = await StakingVault.migrateTo.getCall ? StakingVault.migrateTo : null;
-  
-    const tx = await token.setStakingVault(currentVault);
-    const receipt = await tx.wait();
-  
-    // Check that no StakingVaultUpdated was emitted
-    const stakingEvents = receipt.logs.filter(log =>
-      log.fragment?.name === "StakingVaultUpdated"
-    );
-    expect(stakingEvents.length).to.equal(0);
-  
-    // (Optional) Further: assert migrateTo was NOT called
-    if (migrateSpy) {
-      expect(migrateSpy.callCount).to.equal(0);
-    }
+    await expect(token.setStakingVault(currentVault)).to.be.revertedWith("Same staking vault address");
   });
 
-  it("Does not migrateTo or emit when setCharityVault is called with same address", async () => {
+  it("Reverts when setCharityVault is called with same address", async () => {
     const currentVault = await token.charityVault();
-  
     const CharityVault = await ethers.getContractAt("CharityVault", currentVault);
-    const migrateSpy = await CharityVault.migrateTo.getCall ? CharityVault.migrateTo : null;
-  
-    const tx = await token.setCharityVault(currentVault);
-    const receipt = await tx.wait();
-  
-    // Check that no CharityVaultUpdated was emitted
-    const charityEvents = receipt.logs.filter(log =>
-      log.fragment?.name === "CharityVaultUpdated"
-    );
-    expect(charityEvents.length).to.equal(0);
-  
-    if (migrateSpy) {
-      expect(migrateSpy.callCount).to.equal(0);
-    }
+    await expect(token.setCharityVault(currentVault)).to.be.revertedWith("Same charity vault address");
   });
 
 
@@ -389,7 +359,7 @@ describe("PetCoin AI Token contract", function () {
     const DummyVaultFactory = await ethers.getContractFactory("StakingVault");
     const dummyVault = await DummyVaultFactory.deploy(token.target);
     // Migration will call badVault.migrateTo(dummyVault), which reverts
-    await expect(token.setStakingVault(dummyVault.target)).to.be.revertedWith("vault boom");
+    await expect(token.setStakingVault(dummyVault.target)).to.be.revertedWith("Migration transfer failed");
     // Ensure the internal state wasn't changed
     expect(await token.stakingVault()).to.equal(current);
   });
@@ -402,7 +372,7 @@ describe("PetCoin AI Token contract", function () {
     const DummyVaultFactory = await ethers.getContractFactory("CharityVault");
     const dummyVault = await DummyVaultFactory.deploy(token.target);
     // Migration will call badVault.migrateTo(dummyVault), which reverts
-    await expect(token.setCharityVault(dummyVault.target)).to.be.revertedWith("vault boom");
+    await expect(token.setCharityVault(dummyVault.target)).to.be.revertedWith("Migration transfer failed");
     // Ensure the internal state wasn't changed
     expect(await token.charityVault()).to.equal(current);
   });
