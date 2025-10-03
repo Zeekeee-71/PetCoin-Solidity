@@ -63,9 +63,17 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         emit LimitExclusionUpdated(account, excluded);
     }
 
+    function isVault(address _maybeVault) internal returns (bool) {
+        bytes memory data = abi.encodeWithSignature("isVault()");
+        (bool success, bytes memory returnData) = _maybeVault.call(data);
+        return success;
+    }
+
     function setCharityVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid charity vault address");
         require(_vault != charityVault, "Same charity vault address");
+        require(_vault.code.length > 0, "Vault must be a contract");
+        require(isVault(_vault), "Invalid vault interface");
         isExcludedFromFees[_vault] = true;
         isExcludedFromLimits[_vault] = true;
         address prevVault = charityVault;
@@ -79,6 +87,8 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     function setStakingVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid staking vault address");
         require(_vault != stakingVault, "Same staking vault address");
+        require(_vault.code.length > 0, "Vault must be a contract");
+        require(isVault(_vault), "Invalid vault interface");
         isExcludedFromFees[_vault] = true;
         isExcludedFromLimits[_vault] = true;
         address prevVault = stakingVault;

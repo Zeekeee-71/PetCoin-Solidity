@@ -285,4 +285,8 @@ contract StakingVault is Ownable, ReentrancyGuard {
         }
     }
 
+    function isVault() external returns (bool) {
+        return true;
+    }
+
 }

@@ -54,4 +54,8 @@ contract CharityVault is Ownable {
         require(petToken.transfer(newVault, balance), "Migration transfer failed");
         emit CharityFundsMigrated(newVault, balance);
     }
+
+    function isVault() external returns (bool) {
+        return true;
+    }
 }

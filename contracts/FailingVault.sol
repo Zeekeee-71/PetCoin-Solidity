@@ -6,4 +6,8 @@ contract FailingVault {
     function migrateTo(address) external pure {
         revert("Migration transfer failed");
     }
+
+    function isVault() external returns (bool) {
+        return true;
+    }
 }
