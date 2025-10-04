@@ -149,24 +149,14 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
         uint256 feeAmount = burnAmount + charityAmount + rewardsAmount;
         uint256 transferAmount = amount - feeAmount;
         
-        // Perform net transfer to recipient
+        // First deduct full amount from sender
+        super._update(from, address(0), burnAmount); // Burn by sending to zero address
         super._update(from, to, transferAmount);
-
-        // Burn
-        if (burnAmount > 0) {
-            _burn(from, burnAmount);
-        }
-
-        // Transfer charity and rewards directly
-        if (charityAmount > 0) {
-            super._update(from, charityVault, charityAmount);
-            totalCharityDistributed += charityAmount;
-        }
-
-        if (rewardsAmount > 0) {
-            super._update(from, stakingVault, rewardsAmount);
-            totalRewardsDistributed += rewardsAmount;
-        }
+        super._update(from, charityVault, charityAmount);
+        super._update(from, stakingVault, rewardsAmount);
+        
+        totalCharityDistributed += charityAmount;
+        totalRewardsDistributed += rewardsAmount;
 
         emit FeesTaken(from, charityAmount, burnAmount, rewardsAmount);
     }
