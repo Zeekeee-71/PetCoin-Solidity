@@ -219,7 +219,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
         emit PenaltyUpdated(newPenalty);
     }
 
-    function getTotalLiabilities() external view returns (uint256 liabilities) {
+    function getTotalLiabilities() public view returns (uint256 liabilities) {
         for (uint256 i = 0; i < stakerList.length; i++) {
             address user = stakerList[i];
             Stake[] storage stakes = userStakes[user];
@@ -233,8 +233,8 @@ contract StakingVault is Ownable, ReentrancyGuard {
         }
     }
 
-    function getVaultObligations() internal view returns (uint256 requiredReserve) {
-        requiredReserve = totalStaked + this.getTotalLiabilities();
+    function getVaultObligations() public view returns (uint256 requiredReserve) {
+        requiredReserve = totalStaked + getTotalLiabilities();
     }
 
     function migrateTo(address newVault) external onlyToken {
@@ -248,7 +248,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
         if (transferable > 0){
             require(token.transfer(newVault, transferable), "Migration transfer failed");
         }
-        
+
         finalizeVault();
         emit StakingFundsMigrated(newVault, transferable);
     }
