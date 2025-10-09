@@ -38,6 +38,15 @@ contract AccessGating is Ownable {
         require(tier != Tier.NONE, "Invalid tier"); // always 0
         require(tier != Tier.CLUB, "Invalid tier"); // always only just 1 token
         require(tier <= Tier.DIAMOND, "Invalid tier");
+        if(tier > Tier.SILVER) {
+            require(amountUSD18 > usdThresholds[Tier(uint(tier) - 1)], "Must be higher than previous tier");
+        }
+        if(tier < Tier.DIAMOND) {
+            require(amountUSD18 < usdThresholds[Tier(uint(tier) + 1)], "Must be lower than next tier");
+        }
+        // Validate reasonable bounds (e.g., $5 to $1M)
+        require(amountUSD18 >= 5 * 1e18 && amountUSD18 <= 1_000_000 * 1e18, "Threshold out of bounds");
+
         usdThresholds[tier] = amountUSD18;
         emit ThresholdUpdated(tier, amountUSD18);
     }

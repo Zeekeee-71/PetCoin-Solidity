@@ -133,36 +133,58 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     }
 
     function _update(address from, address to, uint256 amount) internal override whenNotPaused {
-
+        // ---- 1) Fee-exempt & mint/burn passthroughs ----
         if (_isFeeExempt(from, to)) {
             super._update(from, to, amount);
             return;
         }
 
-        if(!_isLimitExempt(from, to)){
-            require(amount <= maxTxSize, "Exceeds max transaction size");
-            if (to != address(0)) {
-                require(balanceOf(to) + amount <= maxWalletSize, "Exceeds max wallet size");
-            }
-        }
-
-        // Calculate each slice
-        uint256 burnAmount = (amount * BURN_FEE) / FEE_DENOMINATOR;
+        // ---- 2) Compute fees first (prevents rounding drift) ----
+        uint256 burnAmount    = (amount * BURN_FEE)    / FEE_DENOMINATOR;
         uint256 charityAmount = (amount * CHARITY_FEE) / FEE_DENOMINATOR;
         uint256 rewardsAmount = (amount * REWARDS_FEE) / FEE_DENOMINATOR;
 
-        // Now derive feeAmount exactly
-        uint256 feeAmount = burnAmount + charityAmount + rewardsAmount;
+        uint256 feeAmount      = burnAmount + charityAmount + rewardsAmount;
         uint256 transferAmount = amount - feeAmount;
-        
-        // First deduct full amount from sender
-        super._update(from, address(0), burnAmount); // Burn by sending to zero address
-        super._update(from, to, transferAmount);
-        super._update(from, charityVault, charityAmount);
-        super._update(from, stakingVault, rewardsAmount);
-        
-        totalCharityDistributed += charityAmount;
-        totalRewardsDistributed += rewardsAmount;
+
+        // ---- 3) Limits ----
+        // Enforce max-tx on the user's original intent (full 'amount').
+        if (!_isLimitExempt(from, to)) {
+            require(amount <= maxTxSize, "Exceeds max transaction size");
+
+            // Max-wallet should consider only actual incoming tokens
+            // and should skip system sinks (zero address, vaults).
+            bool checkMaxWallet = (
+                to != address(0) &&
+                to != charityVault &&
+                to != stakingVault
+            );
+            if (checkMaxWallet) {
+                require(balanceOf(to) + transferAmount <= maxWalletSize, "Exceeds max wallet size");
+            }
+        }
+
+        // ---- 4) Apply fees (supply & accounting) ----
+        // Burn reduces total supply (either call _burn or OZ v5 burn path via to=address(0))
+        if (burnAmount > 0) {
+            // Equivalent: _burn(from, burnAmount);
+            super._update(from, address(0), burnAmount);
+        }
+
+        // Route fee transfers directly FROM 'from' (do NOT mint from address(0))
+        if (charityAmount > 0 && charityVault != address(0)) {
+            super._update(from, charityVault, charityAmount);
+            totalCharityDistributed += charityAmount;
+        }
+        if (rewardsAmount > 0 && stakingVault != address(0)) {
+            super._update(from, stakingVault, rewardsAmount);
+            totalRewardsDistributed += rewardsAmount;
+        }
+
+        // ---- 5) Net transfer ----
+        if (transferAmount > 0) {
+            super._update(from, to, transferAmount);
+        }
 
         emit FeesTaken(from, charityAmount, burnAmount, rewardsAmount);
     }

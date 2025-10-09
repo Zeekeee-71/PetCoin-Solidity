@@ -2,9 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract CharityVault is Ownable {
+contract CharityVault is Ownable, ReentrancyGuard {
     IERC20 public immutable petToken;
 
     modifier onlyToken() {
@@ -33,7 +34,7 @@ contract CharityVault is Ownable {
     /**
      * Spend funds held in the vault for a charitable recipient.
      */
-    function spend(address recipient, uint256 amount, string calldata memo) external onlyOwner {
+    function spend(address recipient, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
         require(recipient != address(0), "Invalid recipient");
 
         IERC20 token = IERC20(petToken);
