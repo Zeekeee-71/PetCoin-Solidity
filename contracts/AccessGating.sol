@@ -27,7 +27,7 @@ contract AccessGating is Ownable {
 
         // Default USD thresholds (in 18 decimal USD)
         usdThresholds[Tier.NONE] = 0;
-        usdThresholds[Tier.CLUB] = 1;
+        usdThresholds[Tier.CLUB] = 1; // Any amount > 0, even one wei
         usdThresholds[Tier.SILVER] = 100 * 1e18;
         usdThresholds[Tier.GOLD] = 500 * 1e18;
         usdThresholds[Tier.PLATINUM] = 1_000 * 1e18;
