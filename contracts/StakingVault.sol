@@ -233,7 +233,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
         }
     }
 
-    function getVaultObligations() external view returns (uint256 requiredReserve) {
+    function getVaultObligations() internal view returns (uint256 requiredReserve) {
         requiredReserve = totalStaked + this.getTotalLiabilities();
     }
 
@@ -241,12 +241,14 @@ contract StakingVault is Ownable, ReentrancyGuard {
         require(newVault != address(0), "Invalid vault address");
 
         IERC20 token = IERC20(petToken);
-        uint256 reserve = this.getVaultObligations();
+        uint256 reserve = getVaultObligations();
         uint256 balance = token.balanceOf(address(this));
         uint256 transferable = balance > reserve ? balance - reserve : 0;
 
-        require(token.transfer(newVault, transferable), "Migration transfer failed");
-
+        if (transferable > 0){
+            require(token.transfer(newVault, transferable), "Migration transfer failed");
+        }
+        
         finalizeVault();
         emit StakingFundsMigrated(newVault, transferable);
     }
