@@ -49,7 +49,7 @@ contract AccessGating is Ownable {
         try IPriceFeed(newFeed).getLatestPrice() returns (uint256 price) {
             require(price > 0, "Invalid price from feed");
         } catch {
-            revert("Invalid price feed interface")
+            revert("Invalid price feed interface");
         }
         priceFeed = IPriceFeed(newFeed);
         emit PriceFeedUpdated(newFeed);
