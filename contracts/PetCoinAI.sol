@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
 interface IStakingVault {
@@ -21,7 +22,7 @@ interface IVault {
     function isVault() external returns (bool);
 }
 
-contract PetCoinAI is ERC20, Ownable, Pausable {
+contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
     uint256 private constant FEE_DENOMINATOR = 10000;
 
     uint256 public constant CHARITY_FEE = 100;    // 1%
@@ -132,7 +133,7 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
             || isExcludedFromLimits[to];
     }
 
-    function _update(address from, address to, uint256 amount) internal override whenNotPaused {
+    function _update(address from, address to, uint256 amount) internal override whenNotPaused nonReentrant {
         // ---- 1) Fee-exempt & mint/burn passthroughs ----
         if (_isFeeExempt(from, to)) {
             super._update(from, to, amount);
