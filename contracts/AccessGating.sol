@@ -44,6 +44,13 @@ contract AccessGating is Ownable {
 
     function setPriceFeed(address newFeed) external onlyOwner {
         require(newFeed != address(0), "Invalid feed");
+        require(newFeed.code.length > 0, "Feed must be a contract");
+        // validate
+        try IPriceFeed(newFeed).getLatestPrice() returns (uint256 price) {
+            require(price > 0, "Invalid price from feed");
+        } catch {
+            revert("Invalid price feed interface")
+        }
         priceFeed = IPriceFeed(newFeed);
         emit PriceFeedUpdated(newFeed);
     }

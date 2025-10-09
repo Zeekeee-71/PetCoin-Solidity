@@ -17,6 +17,10 @@ interface ICharityVault {
     function migrateTo(address newVault) external;
 }
 
+interface IVault {
+    function isVault() external returns (bool);
+}
+
 contract PetCoinAI is ERC20, Ownable, Pausable {
     uint256 private constant FEE_DENOMINATOR = 10000;
 
@@ -64,9 +68,11 @@ contract PetCoinAI is ERC20, Ownable, Pausable {
     }
 
     function isVault(address _maybeVault) internal returns (bool) {
-        bytes memory data = abi.encodeWithSignature("isVault()");
-        (bool success, bytes memory returnData) = _maybeVault.call(data);
-        return success;
+        try IVault(_maybeVault).isVault() returns (bool result) {
+            return result;
+        } catch {
+            return false;
+        }
     }
 
     function setCharityVault(address _vault) external onlyOwner {
