@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // contracts/LocalDeployer.sol
 
 pragma solidity ^0.6.6;
