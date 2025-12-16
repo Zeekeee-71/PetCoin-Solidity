@@ -1,13 +1,19 @@
+const fs = require("fs");
+const path = require("path");
+
 const addressesFor = require("../lib/addresses");
 const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
-task("create-pair", "Creates the PETAI/WETH pair on Uniswap")
+const deployedPath = path.join(__dirname, "..", "deployed.json");
+const deployedRaw = fs.readFileSync(deployedPath, "utf8");
+
+task("create-pair", "Creates the CNU/WETH pair on Uniswap")
   .setAction(async ({ weth }, hre) => {
     const { ethers } = hre;
     const deployed = addressesFor(hre.network.name);
 
     const factory = await ethers.getContractAt(factoryV2ABI, deployed.UniswapV2Factory);
-    //const token = await ethers.getContractAt("PetCoinAI", deployed.token;
+    //const token = await ethers.getContractAt("CNU", deployed.token;
     //const weth = await ethers.getContractAt("IWETH", deployed.weth);
 
     const pair = await factory.getPair(deployed.token, deployed.weth);
@@ -24,11 +30,9 @@ task("create-pair", "Creates the PETAI/WETH pair on Uniswap")
     console.log("New pair address:", newPair);
     // Save it into deployed.json
 
-    deployed.pair = newPair.toString()
+    deployed.pair = newPair.toString();
     const full = JSON.parse(deployedRaw);
     full[hre.network.name] = deployed;
     fs.writeFileSync(deployedPath, JSON.stringify(full, null, 2));
     console.log("✅ Updated deployed.json.");
-
-
   });

@@ -118,6 +118,43 @@ describe("AccessGating", function () {
       expect(await gate.getTier(user1)).to.equal(2); // SILVER
     });
 
+    it("Counts staked principal + unclaimed rewards across staking vault history", async () => {
+      await feed.setPrice(ethers.parseUnits("1", 18)); // $1.00
+      await gate.setThreshold(2, ethers.parseUnits("100", 18)); // SILVER = $100
+
+      const stakeAmount = ethers.parseUnits("100", 18);
+      const expectedReward = stakeAmount / 100n; // 1% on THIRTY tier
+
+      // Prefund the staking vault so it can cover the promised reward.
+      await token.transfer(stakingVault, expectedReward);
+
+      await token.transfer(user1, stakeAmount);
+      await token.connect(user1).approve(stakingVault, stakeAmount);
+      await stakingVault.connect(user1).stake(stakeAmount, 1); // Tier.THIRTY
+
+      expect(await token.balanceOf(user1)).to.equal(0n);
+      expect(await gate.getTier(user1)).to.equal(2); // SILVER, via staked balance
+
+      const StakingVaultFactory = await ethers.getContractFactory("StakingVault");
+      const stakingVault2 = await StakingVaultFactory.deploy(token);
+      await token.setStakingVault(stakingVault2);
+
+      const history = await token.getStakingVaultHistory();
+      expect(history.length).to.equal(2);
+
+      expect(await gate.getUserStakedOwed(user1)).to.equal(stakeAmount + expectedReward);
+      expect(await gate.getTier(user1)).to.equal(2); // SILVER still, stake lives in old vault
+    });
+
+    it("Prevents setting thresholds that break tier ordering", async () => {
+      await expect(gate.setThreshold(3, ethers.parseUnits("50", 18))).to.be.revertedWith("Must be higher than lower tiers");
+      await expect(gate.setThreshold(2, ethers.parseUnits("600", 18))).to.be.revertedWith("Must be lower than higher tiers");
+
+      await gate.setThreshold(2, ethers.parseUnits("5", 18)); // SILVER
+      await gate.setThreshold(3, ethers.parseUnits("50", 18)); // GOLD
+      await expect(gate.setThreshold(2, ethers.parseUnits("100", 18))).to.be.revertedWith("Must be lower than higher tiers");
+    });
+
     
 
   });

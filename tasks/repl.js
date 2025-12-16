@@ -27,7 +27,7 @@ task("repl", "Launch interactive Hardhat REPL")
       tri,
       signers,
       // Contracts
-      token: await ethers.getContractAt("PetCoinAI", deployed.token, deployer),
+      token: await ethers.getContractAt("CNU", deployed.token, deployer),
       weth: await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth, deployer),
       charity: await ethers.getContractAt("CharityVault", deployed.charity, deployer),
       staking: await ethers.getContractAt("StakingVault", deployed.staking, deployer),
@@ -41,7 +41,7 @@ task("repl", "Launch interactive Hardhat REPL")
       delay: ms => new Promise(res => setTimeout(res, ms))
     };
 
-    console.log("🔮 Hardhat PETAI REPL");
+    console.log("🔮 Hardhat CNU REPL");
     const replServer = repl.start({
       prompt: "🦴 > ",
       useGlobal: false,

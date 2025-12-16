@@ -2,8 +2,8 @@
 const addressesFor = require("../lib/addresses");
 const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
-task("swap-out", "Swap PETAI for WETH using fee-on-transfer-safe method")
-  .addPositionalParam("amountIn", "Amount of PETAI to swap", "1000")
+task("swap-out", "Swap CNU for WETH using fee-on-transfer-safe method")
+  .addPositionalParam("amountIn", "Amount of CNU to swap", "1000")
   .addOptionalPositionalParam("from", "signerIdx", "0")
   .setAction(async ({ amountIn, from }, hre) => {
     const { ethers } = hre;
@@ -22,44 +22,44 @@ task("swap-out", "Swap PETAI for WETH using fee-on-transfer-safe method")
     const pair = await ethers.getContractAt(pairV2ABI, deployed.pair);
 
     const weth = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
-    const petai = await ethers.getContractAt("PetCoinAI", deployed.token);
+    const cnu = await ethers.getContractAt("CNU", deployed.token);
 
-    const petAmount = ethers.parseEther(amountIn);
+    const cnuAmount = ethers.parseEther(amountIn);
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-    // Approve router to spend PETAI
-    const approval = await petai.connect(signer).approve(router.target, petAmount * 2n); /////////////////////////////////
-    const approval2 = await petai.connect(signer).approve(pair.target, petAmount *2n);  /////////////////////////////////
+    // Approve router to spend CNU
+    const approval = await cnu.connect(signer).approve(router.target, cnuAmount * 2n); /////////////////////////////////
+    const approval2 = await cnu.connect(signer).approve(pair.target, cnuAmount *2n);  /////////////////////////////////
     
     await approval.wait();
     await approval2.wait();
 
-    const allowance = await petai.connect(signer).allowance(signer.address, router.target);
-    const allowance2 = await petai.connect(signer).allowance(signer.address, pair.target);
+    const allowance = await cnu.connect(signer).allowance(signer.address, router.target);
+    const allowance2 = await cnu.connect(signer).allowance(signer.address, pair.target);
 
-    console.log(`Allowance to router: ${ethers.formatEther(allowance)} PETAI`);
-    console.log(`Allowance to pair: ${ethers.formatEther(allowance2)} PETAI`);
+    console.log(`Allowance to router: ${ethers.formatEther(allowance)} CNU`);
+    console.log(`Allowance to pair: ${ethers.formatEther(allowance2)} CNU`);
 
-    const petBalance = await petai.connect(signer).balanceOf(signer.address);
-    console.log("PETAI token balance:", ethers.formatEther(petBalance, 18));
-    const maxWallet = await petai.maxWalletSize();
-    const maxTx = await petai.maxTxSize();
+    const cnuBalance = await cnu.connect(signer).balanceOf(signer.address);
+    console.log("CNU token balance:", ethers.formatEther(cnuBalance, 18));
+    const maxWallet = await cnu.maxWalletSize();
+    const maxTx = await cnu.maxTxSize();
     const userBal = await weth.connect(signer).balanceOf(signer.address);
     
     console.log("Max wallet size:", ethers.formatUnits(maxWallet, 18));
     console.log("Max tx size:", ethers.formatUnits(maxTx, 18));
     console.log("User's WETH balance before swap:", ethers.formatUnits(userBal, 18));
 
-    const out = await router.connect(signer).getAmountsOut(petAmount, [deployed.token, deployed.weth]);
+    const out = await router.connect(signer).getAmountsOut(cnuAmount, [deployed.token, deployed.weth]);
     console.log(`📈 Estimated WETH received: ${ethers.formatUnits(out[1], 18)}`);
 
-    console.log(`🚀 Swapping ${ethers.formatEther(petAmount)} PETAI for WETH...`);
+    console.log(`🚀 Swapping ${ethers.formatEther(cnuAmount)} CNU for WETH...`);
 
     let tx;
     try {
       tx = await router.connect(signer).swapExactTokensForTokensSupportingFeeOnTransferTokens( ///////////////////////////////
-        petAmount,
-        0, // accept any amount of PETAI
+        cnuAmount,
+        0, // accept any amount of CNU
         [deployed.token, deployed.weth],
         signer,
         deadline,

@@ -72,10 +72,16 @@ contract UniswapV2PriceFeed is Ownable {
         (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLastPair) = pair.getReserves();
         blockTimestamp = uint32(block.timestamp);
 
-        if (blockTimestampLastPair != blockTimestamp && price0Cumulative == priceCumulativeLast) {
+        if (blockTimestampLastPair != blockTimestamp) {
             uint32 timeElapsed = blockTimestamp - blockTimestampLastPair;
-            price0Cumulative += UQ112x112.uqdiv(UQ112x112.encode(reserve1), reserve0) * timeElapsed;
-            price1Cumulative += UQ112x112.uqdiv(UQ112x112.encode(reserve0), reserve1) * timeElapsed;
+
+            require(reserve0 > 0 && reserve1 > 0, "UniswapV2PriceFeed: NO_RESERVES");
+
+            uint256 price0Delta = uint256(UQ112x112.uqdiv(UQ112x112.encode(reserve1), reserve0)) * uint256(timeElapsed);
+            uint256 price1Delta = uint256(UQ112x112.uqdiv(UQ112x112.encode(reserve0), reserve1)) * uint256(timeElapsed);
+
+            price0Cumulative += price0Delta;
+            price1Cumulative += price1Delta;
         }
     }
 }

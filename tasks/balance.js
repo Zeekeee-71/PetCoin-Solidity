@@ -12,7 +12,7 @@ task("balance", "Retrieve a balance")
     const deployed = JSON.parse(deployedRaw)[hre.network.name];
 
   
-    const Token = await ethers.getContractAt("PetCoinAI", deployed.token);
+    const Token = await ethers.getContractAt("CNU", deployed.token);
   
     console.info("Balance for: ", wallet)
 
@@ -22,6 +22,6 @@ task("balance", "Retrieve a balance")
       Token.symbol(),
     ]);
     console.log(`💰 Token: ${name} (${symbol})`);
-    console.log(`   Your Balance: ${ethers.formatEther(await Token.balanceOf(wallet))} PETAI\n`);
+    console.log(`   Your Balance: ${ethers.formatEther(await Token.balanceOf(wallet))} CNU\n`);
   
   });

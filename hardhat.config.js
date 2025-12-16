@@ -25,7 +25,10 @@ module.exports = {
   solidity: {
     compilers: [
       { version: "0.5.16",
-        settings: { optimizer: { enabled: true, runs: 200 } } },
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+          evmVersion: "istanbul", // Aligns Uniswap V2 init code hash with periphery constant
+        } },
       { version: "0.6.6",
         settings: { optimizer: { enabled: true, runs: 200 } } },
       { version: "0.8.28",
@@ -35,17 +38,17 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: {
-        count: 20, // 👈 More accounts!
+        count: 20,
         balance: "1000000000000000000000" // 1000 ETH
       }
     },
-    sepolia: {
-      url: process.env.SEPOLIA_RPC_URL,
-      accounts: [
-        process.env.PRIVATE_WALLET_KEY,  // First key, required
-        process.env.PRIVATE_WALLET_KEY2, // Optional second key
-        process.env.PRIVATE_WALLET_KEY3  // Optional third key
-      ],
-    },
+//    sepolia: {
+//      url: process.env.SEPOLIA_RPC_URL,
+//      accounts: [
+//        process.env.PRIVATE_WALLET_KEY,  // First key, required
+//        process.env.PRIVATE_WALLET_KEY2, // Optional second key
+//        process.env.PRIVATE_WALLET_KEY3  // Optional third key
+//      ],
+//    },
   },
 };

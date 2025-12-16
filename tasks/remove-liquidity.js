@@ -1,7 +1,7 @@
 const addressesFor = require("../lib/addresses");
 const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
-task("remove-liquidity", "Removes liquidity from the PETAI/WETH pool")
+task("remove-liquidity", "Removes liquidity from the CNU/WETH pool")
   .addPositionalParam("liquidity", "Amount of LP tokens to exchange (in wei)", "0")
   .setAction(async ({ liquidity }, hre) => {
 
@@ -10,7 +10,7 @@ task("remove-liquidity", "Removes liquidity from the PETAI/WETH pool")
     const { ethers } = hre;
     const deployed = addressesFor(hre.network.name);  
 
-    const token = await ethers.getContractAt("PetCoinAI", deployed.token);
+    const token = await ethers.getContractAt("CNU", deployed.token);
     const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
     const pair = await ethers.getContractAt(pairV2ABI, deployed.pair);
 

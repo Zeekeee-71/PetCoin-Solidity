@@ -12,7 +12,7 @@ contract MockPriceFeed is Ownable {
         return price;
     }
 
-    // 🔧 Manual override (testnet use only)
+    // Manual override (testnet use only)
     function setPrice(uint256 newPrice) external onlyOwner {
         price = newPrice;
     }

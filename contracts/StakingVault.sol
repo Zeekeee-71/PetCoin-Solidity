@@ -1,18 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./IPetCoinVaults.sol";
+import "./ICNUVaults.sol";
+import "./VaultBase.sol";
 
-contract StakingVault is Ownable, ReentrancyGuard {
-    IERC20 public immutable petToken;
-
-    modifier onlyToken() {
-        require(msg.sender == address(petToken), "Unauthorized: not token");
-        _;
-    }
+contract StakingVault is VaultBase {
 
     modifier notFinalized() {
         require(!isFinalized, "Vault is finalized");
@@ -36,9 +28,15 @@ contract StakingVault is Ownable, ReentrancyGuard {
 
     mapping(address => Stake[]) public userStakes;
     mapping(address => bool) public isStaker;
+    mapping(address => uint256) public activeStakeCount;
+    mapping(address => uint256) public userTotalStaked;
+    mapping(address => uint256) public userTotalRewards;
+    mapping(address => uint256) public userTotalOwed;
+    mapping(address => uint256) private stakerIndex;
     address[] public stakerList;
 
     uint256 public totalStaked;
+    uint256 public totalLiabilities;
     bool public stakingPaused = false;
     uint256 public earlyWithdrawPenalty = 1000; // 10% penalty
     bool public isFinalized = false;
@@ -49,24 +47,35 @@ contract StakingVault is Ownable, ReentrancyGuard {
     event StakingPaused(bool paused);
     event PenaltyUpdated(uint256 newPenalty);
     event StakingFundsMigrated(address indexed to, uint256 amount);
-    event VaultFinalized(uint256 stakersRemaining, uint256 reserve);
 
 
 
-    constructor(address _petToken) Ownable(msg.sender) {
-        require(_petToken != address(0), "Invalid token");
-        petToken = IERC20(_petToken);
+    constructor(address _cnuToken) VaultBase(_cnuToken) {
+        require(_cnuToken != address(0), "Invalid token");
     }
 
     function stake(uint256 amount, Tier tier) external nonReentrant notPaused notFinalized {
         (uint256 duration, uint256 rate) = getTierParams(tier);
         require(duration > 0, "Invalid tier");
         require(amount > 0, "Amount must be > 0");
+        require(rate > 0, "Invalid tier");
+        require(amount <= type(uint256).max / rate, "Stake amount too large");
+
+        uint256 reward = (amount * rate) / 10000;
+        uint256 balance = cnuToken.balanceOf(address(this));
+        require(balance >= totalStaked + totalLiabilities + reward, "Insufficient reward reserves");
+        totalLiabilities += reward;
 
         if (!isStaker[msg.sender]) {
             isStaker[msg.sender] = true;
+            stakerIndex[msg.sender] = stakerList.length;
             stakerList.push(msg.sender);
         }
+
+        activeStakeCount[msg.sender] += 1;
+        userTotalStaked[msg.sender] += amount;
+        userTotalRewards[msg.sender] += reward;
+        userTotalOwed[msg.sender] += amount + reward;
 
         userStakes[msg.sender].push(Stake({
             amount: amount,
@@ -78,7 +87,7 @@ contract StakingVault is Ownable, ReentrancyGuard {
 
         totalStaked += amount;
 
-        require(petToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        require(cnuToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         uint256 stakeId = userStakes[msg.sender].length - 1;
         emit Staked(msg.sender, stakeId, amount, duration, rate);
@@ -94,10 +103,14 @@ contract StakingVault is Ownable, ReentrancyGuard {
 
         s.claimed = true;
         totalStaked -= s.amount;
-
-        require(petToken.transfer(msg.sender, payout), "Payout failed");
-        
+        if (reward > 0) totalLiabilities -= reward;
+        activeStakeCount[msg.sender] -= 1;
+        userTotalStaked[msg.sender] -= s.amount;
+        userTotalRewards[msg.sender] -= reward;
+        userTotalOwed[msg.sender] -= payout;
         cleanupStaker(msg.sender);
+
+        require(cnuToken.transfer(msg.sender, payout), "Payout failed");
 
         emit Claimed(msg.sender, stakeId, reward);
     }
@@ -107,23 +120,29 @@ contract StakingVault is Ownable, ReentrancyGuard {
         require(!s.claimed, "Already claimed");
         require(block.timestamp < s.startTime + s.lockDuration, "Already unlocked");
 
+        address charityVault = getCharityVault();
+
         uint256 reward = s.amount * s.rewardRate / 10000;
         uint256 penalty = s.amount * earlyWithdrawPenalty / 10000;
         uint256 refund = s.amount - penalty;
 
-        s.claimed = true;
-        totalStaked -= s.amount;
-
+        bool finalized = isFinalized;
         uint256 toCharity = penalty;
-        address charityVault = getCharityVault();
-        if (isFinalized) {
+        if (finalized) {
             toCharity += reward;
         }
 
-        require(petToken.transfer(msg.sender, refund), "Refund failed");
-        require(petToken.transfer(charityVault, toCharity), "Penalty transfer failed");
-
+        s.claimed = true;
+        totalStaked -= s.amount;
+        if (reward > 0) totalLiabilities -= reward;
+        activeStakeCount[msg.sender] -= 1;
+        userTotalStaked[msg.sender] -= s.amount;
+        userTotalRewards[msg.sender] -= reward;
+        userTotalOwed[msg.sender] -= (s.amount + reward);
         cleanupStaker(msg.sender);
+
+        require(cnuToken.transfer(msg.sender, refund), "Refund failed");
+        require(cnuToken.transfer(charityVault, toCharity), "Penalty transfer failed");
 
         emit EarlyWithdrawn(msg.sender, stakeId, toCharity);
     }
@@ -156,15 +175,15 @@ contract StakingVault is Ownable, ReentrancyGuard {
         uint256 totalRewardsEarned,
         uint256 claimableNow
     ) {
+        totalStakedAmount = userTotalStaked[user];
+        totalRewardsEarned = userTotalRewards[user];
+
         Stake[] storage stakes = userStakes[user];
         for (uint256 i = 0; i < stakes.length; i++) {
             Stake storage s = stakes[i];
             if (!s.claimed) {
-                uint256 reward = s.amount * s.rewardRate / 10000;
-                totalStakedAmount += s.amount;
-                totalRewardsEarned += reward;
-
                 if (block.timestamp >= s.startTime + s.lockDuration) {
+                    uint256 reward = s.amount * s.rewardRate / 10000;
                     claimableNow += s.amount + reward;
                 }
             }
@@ -193,18 +212,60 @@ contract StakingVault is Ownable, ReentrancyGuard {
 
 
     function getUserOwed(address user) external view returns (uint256 total) {
+        return userTotalOwed[user];
+    }
+
+    function getUserClaimableNow(address user, uint256 offset, uint256 limit) external view returns (uint256 claimable, uint256 nextOffset) {
+        require(limit > 0, "Limit must be > 0");
+        require(limit <= 200, "Limit too high");
+
+        Stake[] storage stakes = userStakes[user];
+        uint256 length = stakes.length;
+        if (offset >= length) return (0, length);
+
+        uint256 end = offset + limit;
+        if (end > length) end = length;
+
+        for (uint256 i = offset; i < end; i++) {
+            Stake storage s = stakes[i];
+            if (!s.claimed && block.timestamp >= s.startTime + s.lockDuration) {
+                uint256 reward = s.amount * s.rewardRate / 10000;
+                claimable += s.amount + reward;
+            }
+        }
+        return (claimable, end);
+    }
+
+    function getUserClaimableNowAll(address user) external view returns (uint256 claimable) {
         Stake[] storage stakes = userStakes[user];
         for (uint256 i = 0; i < stakes.length; i++) {
             Stake storage s = stakes[i];
-            if (!s.claimed) {
+            if (!s.claimed && block.timestamp >= s.startTime + s.lockDuration) {
                 uint256 reward = s.amount * s.rewardRate / 10000;
-                total += s.amount + reward;
+                claimable += s.amount + reward;
             }
         }
     }
 
     function getAllStakers() external view returns (address[] memory) {
         return stakerList;
+    }
+
+    function getStakers(uint256 offset, uint256 limit) external view returns (address[] memory) {
+        require(limit > 0, "Limit must be > 0");
+        require(limit <= 200, "Limit too high");
+
+        uint256 length = stakerList.length;
+        if (offset >= length) return new address[](0);
+
+        uint256 end = offset + limit;
+        if (end > length) end = length;
+
+        address[] memory result = new address[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = stakerList[i];
+        }
+        return result;
     }
 
     function pauseStaking(bool _pause) external onlyOwner {
@@ -220,27 +281,19 @@ contract StakingVault is Ownable, ReentrancyGuard {
     }
 
     function getTotalLiabilities() public view returns (uint256 liabilities) {
-        for (uint256 i = 0; i < stakerList.length; i++) {
-            address user = stakerList[i];
-            Stake[] storage stakes = userStakes[user];
-
-            for (uint256 j = 0; j < stakes.length; j++) {
-                Stake storage s = stakes[j];
-                if (!s.claimed) {
-                    liabilities += (s.amount * s.rewardRate) / 10000;
-                }
-            }
-        }
+        return totalLiabilities;
     }
 
     function getVaultObligations() public view returns (uint256 requiredReserve) {
         requiredReserve = totalStaked + getTotalLiabilities();
     }
 
-    function migrateTo(address newVault) external onlyToken {
+    function migrateTo(address newVault) external onlyToken notFinalized nonReentrant {
         require(newVault != address(0), "Invalid vault address");
 
-        IERC20 token = IERC20(petToken);
+        isFinalized = true;
+
+        IERC20 token = cnuToken;
         uint256 reserve = getVaultObligations();
         uint256 balance = token.balanceOf(address(this));
         uint256 transferable = balance > reserve ? balance - reserve : 0;
@@ -248,47 +301,38 @@ contract StakingVault is Ownable, ReentrancyGuard {
         if (transferable > 0){
             require(token.transfer(newVault, transferable), "Migration transfer failed");
         }
-
-        finalizeVault();
         emit StakingFundsMigrated(newVault, transferable);
     }
 
     function getCharityVault() internal view returns (address) {
-        return IPetCoinVaults(address(petToken)).charityVault();
-    }
-
-    function finalizeVault() internal {
-        isFinalized = true;
-        emit VaultFinalized(stakerList.length, petToken.balanceOf(address(this)));
+        return ICNUVaults(address(cnuToken)).charityVault();
     }
 
     function cleanupStaker(address user) internal {
-        Stake[] storage stakes = userStakes[user];
-        bool hasActiveStake = false;
+        if (activeStakeCount[user] != 0) return;
+        if (!isStaker[user]) return;
 
-        for (uint256 i = 0; i < stakes.length; i++) {
-            if (!stakes[i].claimed) {
-                hasActiveStake = true;
-                break;
-            }
-        }
-
-        if (!hasActiveStake) {
+        uint256 listLength = stakerList.length;
+        if (listLength == 0) {
             isStaker[user] = false;
-
-            // Remove from stakerList
-            for (uint256 i = 0; i < stakerList.length; i++) {
-                if (stakerList[i] == user) {
-                    stakerList[i] = stakerList[stakerList.length - 1];
-                    stakerList.pop();
-                    break;
-                }
-            }
+            delete stakerIndex[user];
+            return;
         }
-    }
 
-    function isVault() external returns (bool) {
-        return true;
+        uint256 index = stakerIndex[user];
+        if (index >= listLength || stakerList[index] != user) return;
+
+        uint256 lastIndex = listLength - 1;
+
+        if (index != lastIndex) {
+            address lastUser = stakerList[lastIndex];
+            stakerList[index] = lastUser;
+            stakerIndex[lastUser] = index;
+        }
+
+        stakerList.pop();
+        delete stakerIndex[user];
+        isStaker[user] = false;
     }
 
 }

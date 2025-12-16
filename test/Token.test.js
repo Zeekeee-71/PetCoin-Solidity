@@ -2,14 +2,14 @@ const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { deployEcosystem } = require("./utils/deploy");
 
-describe("PetCoin AI Token contract", function () {
+describe("Companion Network Unit Token contract", function () {
 
-  let owner, user1, user2, user3, rest, token, charityVault, stakingVault, gate, feed;
+  let owner, user1, user2, user3, rest, token, treasuryVault, charityVault, stakingVault, gate, feed;
 
 
   beforeEach(async () => {
     const ecosystem = await loadFixture(deployEcosystem);
-    ({ owner, user1, user2, user3, rest, token, charityVault, stakingVault, gate, feed } = ecosystem);
+    ({ owner, user1, user2, user3, rest, token, treasuryVault, charityVault, stakingVault, gate, feed } = ecosystem);
   });
 
   it("Deployment should assign the total supply of tokens to the owner", async function () {
@@ -20,7 +20,11 @@ describe("PetCoin AI Token contract", function () {
 
   it("Allows transfers between users and take fees", async () => {
     const amount = ethers.parseUnits("10000", 18);
-    const totalFee = ethers.parseUnits("350", 18); // 3.5%
+    const burnFee = await token.burnFee();
+    const charityFee = await token.charityFee();
+    const rewardsFee = await token.rewardsFee();
+    const feeDenominator = 10000n;
+    const totalFee = (amount * (burnFee + charityFee + rewardsFee)) / feeDenominator;
     await token.transfer(user1, amount);
     await token.connect(user1).transfer(user2, amount);
     const expectedReceived = amount - totalFee;
@@ -41,9 +45,8 @@ describe("PetCoin AI Token contract", function () {
     const amount = ethers.parseUnits("100000", 18); // BigNumber (ethers)
     await token.transfer(user1.address, amount);   // Fee-exempt
     await token.connect(user1).transfer(user2, amount); // Fee applies
-    const CHARITY_FEE = 100n;
     const FEE_DENOMINATOR = 10000n;
-    const expectedCharity = (amount * CHARITY_FEE) / FEE_DENOMINATOR;
+    const expectedCharity = (amount * (await token.charityFee())) / FEE_DENOMINATOR;
     const actualCharity = await token.balanceOf(await token.charityVault());
     expect(actualCharity).to.equal(expectedCharity);
   });
@@ -52,11 +55,38 @@ describe("PetCoin AI Token contract", function () {
     const amount = ethers.parseUnits("100000", 18);
     await token.transfer(user1.address, amount);
     await token.connect(user1).transfer(user2, amount);
-    const REWARDS_FEE = 200n;
     const FEE_DENOMINATOR = 10000n;
-    const expectedRewards = amount * REWARDS_FEE / FEE_DENOMINATOR;
+    const expectedRewards = amount * (await token.rewardsFee()) / FEE_DENOMINATOR;
     const stakingBal = await token.balanceOf(await token.stakingVault());
     expect(stakingBal).to.equal(expectedRewards);
+  });
+
+  it("Allows owner to update fees and applies new rates", async () => {
+    const newBurn = 75n;
+    const newCharity = 125n;
+    const newRewards = 250n;
+    await expect(token.setFees(newBurn, newCharity, newRewards)).to.emit(token, "FeesUpdated").withArgs(newBurn, newCharity, newRewards);
+
+    const amount = ethers.parseUnits("10000", 18);
+    await token.transfer(user1, amount);
+    const denominator = 10000n;
+    const expectedBurn = (amount * newBurn) / denominator;
+    const expectedCharity = (amount * newCharity) / denominator;
+    const expectedRewards = (amount * newRewards) / denominator;
+    const expectedNet = amount - expectedBurn - expectedCharity - expectedRewards;
+
+    const supplyBefore = await token.totalSupply();
+    await token.connect(user1).transfer(user2, amount);
+    const supplyAfter = await token.totalSupply();
+
+    expect(await token.balanceOf(user2)).to.equal(expectedNet);
+    expect(await token.balanceOf(await token.charityVault())).to.equal(expectedCharity);
+    expect(await token.balanceOf(await token.stakingVault())).to.equal(expectedRewards);
+    expect(supplyBefore - supplyAfter).to.equal(expectedBurn);
+  });
+
+  it("Reverts when setting fees above limit", async () => {
+    await expect(token.setFees(400, 200, 200)).to.be.revertedWith("Total fee exceeds limit");
   });
 
   it("Does not charge fees when transferring from owner or to charity vault", async () => {
@@ -84,7 +114,7 @@ describe("PetCoin AI Token contract", function () {
     await token.connect(user1).transfer(user2, amount);
 
     const totalAfter = await token.totalSupply();
-    const expectedBurn = amount * 50n / 10000n; // 0.5%
+    const expectedBurn = amount * (await token.burnFee()) / 10000n;
     expect(totalBefore - totalAfter).to.equal(expectedBurn);
   });
 
@@ -93,9 +123,9 @@ describe("PetCoin AI Token contract", function () {
     const amount = ethers.parseUnits("1000", 18);
     await token.transfer(user1, amount);
     await token.connect(user1).transfer(user2, amount);
-    
+
     const totalAfter = await token.totalSupply();
-    const expectedBurn = amount * 50n / 10000n; // 0.5%
+    const expectedBurn = amount * (await token.burnFee()) / 10000n;
     expect(totalBefore - totalAfter).to.equal(expectedBurn);
   });
 
@@ -157,6 +187,9 @@ describe("PetCoin AI Token contract", function () {
     await expect(
       token.connect(user1).setStakingVault(user2.address)
     ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
+    await expect(
+      token.connect(user1).setTreasuryVault(user2.address)
+    ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
   });
 
   it("Burns tokens on transfer (if burn fee applies)", async () => {
@@ -177,7 +210,13 @@ describe("PetCoin AI Token contract", function () {
     await token.connect(user1).approve(user2, amount);
     await token.connect(user2).transferFrom(user1, user3, amount);
 
-    expect(await token.balanceOf(user3)).to.be.closeTo(amount * 9650n / 10000n, 1); // fees
+    const burnFee = await token.burnFee();
+    const charityFee = await token.charityFee();
+    const rewardsFee = await token.rewardsFee();
+    const denominator = 10000n;
+    const expectedNet = amount - ((amount * (burnFee + charityFee + rewardsFee)) / denominator);
+
+    expect(await token.balanceOf(user3)).to.be.closeTo(expectedNet, 1); // fees
   });
 
   it("Allows fee exempt transactions [u1 (exempt) -> u2]", async () => {
@@ -274,6 +313,10 @@ describe("PetCoin AI Token contract", function () {
     // Deploy new charity vault
     const CharityVaultFactory = await ethers.getContractFactory("CharityVault");
     const newCharityVault = await CharityVaultFactory.deploy(token.target);
+
+    const charityHistoryBefore = await token.getCharityVaultHistory();
+    expect(charityHistoryBefore.length).to.equal(1);
+    expect(charityHistoryBefore[0]).to.equal(charityVault.target);
   
     // Fund old charity vault
     const amount = ethers.parseUnits("10000000", 18);
@@ -294,6 +337,40 @@ describe("PetCoin AI Token contract", function () {
   
     // Confirm the token's internal charityVault address is updated
     expect(await token.charityVault()).to.equal(newCharityVault.target);
+
+    const charityHistoryAfter = await token.getCharityVaultHistory();
+    expect(charityHistoryAfter.length).to.equal(2);
+    expect(charityHistoryAfter[0]).to.equal(charityVault.target);
+    expect(charityHistoryAfter[1]).to.equal(newCharityVault.target);
+  });
+
+  it("Migrates treasury vault and transfer balance", async () => {
+    const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
+    const newTreasury = await TreasuryVaultFactory.deploy(token.target);
+
+    const treasuryHistoryBefore = await token.getTreasuryVaultHistory();
+    expect(treasuryHistoryBefore.length).to.equal(1);
+    expect(treasuryHistoryBefore[0]).to.equal(treasuryVault.target);
+
+    const amount = ethers.parseUnits("10000000", 18);
+    await token.transfer(treasuryVault.target, amount);
+
+    const balanceBefore = await token.balanceOf(treasuryVault.target);
+
+    await expect(token.setTreasuryVault(newTreasury.target))
+      .to.not.be.reverted;
+
+    const oldVaultBalance = await token.balanceOf(treasuryVault.target);
+    const newVaultBalance = await token.balanceOf(newTreasury.target);
+
+    expect(oldVaultBalance).to.equal(0);
+    expect(newVaultBalance).to.equal(balanceBefore);
+    expect(await token.treasuryVault()).to.equal(newTreasury.target);
+
+    const treasuryHistoryAfter = await token.getTreasuryVaultHistory();
+    expect(treasuryHistoryAfter.length).to.equal(2);
+    expect(treasuryHistoryAfter[0]).to.equal(treasuryVault.target);
+    expect(treasuryHistoryAfter[1]).to.equal(newTreasury.target);
   });
 
   it("Handles unit transfers without rounding errors or fee leakage", async () => {
@@ -313,6 +390,18 @@ describe("PetCoin AI Token contract", function () {
     expect(await token.totalSupply()).to.be.gte(supplyAfter - maxPossibleBurn);
   });
 
+  it("Captures fee rounding remainder on small transfers", async () => {
+    const amount = 99n;
+    await token.transfer(user1, amount);
+
+    const stakingBefore = await token.balanceOf(await token.stakingVault());
+    await token.connect(user1).transfer(user2, amount);
+
+    // Total fee bps = 350 => floor(99 * 350 / 10000) = 3
+    expect(await token.balanceOf(user2)).to.equal(96n);
+    expect(await token.balanceOf(await token.stakingVault())).to.equal(stakingBefore + 3n);
+  });
+
   it("Reverts when setStakingVault is called with same address", async () => {
     const currentVault = await token.stakingVault();
     const StakingVault = await ethers.getContractAt("StakingVault", currentVault);
@@ -325,13 +414,16 @@ describe("PetCoin AI Token contract", function () {
     await expect(token.setCharityVault(currentVault)).to.be.revertedWith("Same charity vault address");
   });
 
+  it("Reverts when setTreasuryVault is called with same address", async () => {
+    const currentVault = await token.treasuryVault();
+    await expect(token.setTreasuryVault(currentVault)).to.be.revertedWith("Same treasury vault address");
+  });
+
 
   it("Accurately tracks totalCharityDistributed and totalRewardsDistributed", async () => {
     const amount = ethers.parseUnits("100000", 18); // clean number
-    const CHARITY_FEE = 100n;
-    const REWARDS_FEE = 200n;
     const DENOM = 10000n;
-  
+
     // Setup
     await token.transfer(user1.address, amount);
     const beforeCharity = await token.totalCharityDistributed();
@@ -339,11 +431,11 @@ describe("PetCoin AI Token contract", function () {
   
     // Action: user1 transfers to user2 (normal fee-charged tx)
     await token.connect(user1).transfer(user2.address, amount);
-  
+
     // Expectations
-    const expectedCharity = (amount * CHARITY_FEE) / DENOM;
-    const expectedRewards = (amount * REWARDS_FEE) / DENOM;
-  
+    const expectedCharity = (amount * (await token.charityFee())) / DENOM;
+    const expectedRewards = (amount * (await token.rewardsFee())) / DENOM;
+
     const afterCharity = await token.totalCharityDistributed();
     const afterRewards = await token.totalRewardsDistributed();
   
@@ -377,6 +469,17 @@ describe("PetCoin AI Token contract", function () {
     expect(await token.charityVault()).to.equal(current);
   });
 
+  it("Rolls back setTreasuryVault if migrateTo fails", async () => {
+    const FailingVaultFactory = await ethers.getContractFactory("FailingVault");
+    const badVault = await FailingVaultFactory.deploy();
+    await token.setTreasuryVault(badVault.target);
+    const current = await token.treasuryVault();
+    const DummyVaultFactory = await ethers.getContractFactory("TreasuryVault");
+    const dummyVault = await DummyVaultFactory.deploy(token.target);
+    await expect(token.setTreasuryVault(dummyVault.target)).to.be.revertedWith("Migration transfer failed");
+    expect(await token.treasuryVault()).to.equal(current);
+  });
+
   it("Allows transferFrom() by approved spender with correct fee logic", async () => {
     const amount = ethers.parseUnits("1000", 18);
     await token.transfer(user1, amount);
@@ -394,10 +497,13 @@ describe("PetCoin AI Token contract", function () {
     const allowanceAfter = await token.allowance(user1.address, user2.address);
     const user1BalanceAfter = await token.balanceOf(user1.address);
     const user3BalanceAfter = await token.balanceOf(user3.address);
-  
-    // Fees: 3.5% = 35 PETAI, net transfer = 965
-    const expectedNet = ethers.parseUnits("965", 18);
-  
+
+    const burnRate = await token.burnFee();
+    const charityRate = await token.charityFee();
+    const rewardsRate = await token.rewardsFee();
+    const feeDenominator = 10000n;
+    const expectedNet = amount - ((amount * (burnRate + charityRate + rewardsRate)) / feeDenominator);
+
     expect(allowanceAfter).to.equal(0);
     expect(user1BalanceAfter).to.equal(user1BalanceBefore - amount);
     expect(user3BalanceAfter - user3BalanceBefore).to.equal(expectedNet);
@@ -445,11 +551,8 @@ describe("PetCoin AI Token contract", function () {
 
   it("Applies full fees correctly via transferFrom and updates all counters", async () => {
     const amount = ethers.parseUnits("10000", 18); // Clean number for math
-    const burnRate = 50n;
-    const charityRate = 100n;
-    const rewardsRate = 200n;
     const denominator = 10000n;
-  
+
     await token.transfer(user1, amount);
   
     // Ensure none of the actors are fee-exempt
@@ -467,7 +570,10 @@ describe("PetCoin AI Token contract", function () {
   
     // Perform transferFrom from user1 to user3, via user2
     await token.connect(user2).transferFrom(user1.address, user3.address, amount);
-  
+
+    const burnRate = await token.burnFee();
+    const charityRate = await token.charityFee();
+    const rewardsRate = await token.rewardsFee();
     const feeTotal = (amount * (burnRate + charityRate + rewardsRate)) / denominator;
     const netAmount = amount - feeTotal;
     const burnAmount = (amount * burnRate) / denominator;
@@ -491,12 +597,12 @@ describe("PetCoin AI Token contract", function () {
   });
 
   it("Reverts transferFrom if it exceeds maxTxSize or maxWalletSize", async () => {
-    const largeAmount = ethers.parseUnits("125000000", 18); // 125M PETAI
+    const largeAmount = ethers.parseUnits("125000000", 18); // 125M CNU
     await token.transfer(user1, largeAmount);
   
     // Set strict limits
-    const maxTx = ethers.parseUnits("100000000", 18); // max tx = 100M PETAI
-    const maxWallet = ethers.parseUnits("150000000", 18); // max wallet = 150M PETAI
+    const maxTx = ethers.parseUnits("100000000", 18); // max tx = 100M CNU
+    const maxWallet = ethers.parseUnits("150000000", 18); // max wallet = 150M CNU
     await expect(token.connect(owner).setTxLimit(maxTx)).to.not.be.reverted;
     await expect(token.connect(owner).setWalletLimit(maxWallet)).to.not.be.reverted;
   

@@ -13,7 +13,8 @@ task("status", "Get summery stats")
     const [signer] = await ethers.getSigners();
     console.log(`📡 Querying contracts from: ${signer.address} on [${network}]\n`);
   
-    const token = await ethers.getContractAt("PetCoinAI", deployed.token);
+    const token = await ethers.getContractAt("CNU", deployed.token);
+    const treasuryVault = await ethers.getContractAt("TreasuryVault", deployed.treasury);
     const charityVault = await ethers.getContractAt("CharityVault", deployed.charity);
     const stakingVault = await ethers.getContractAt("StakingVault", deployed.staking);
     const feed = await ethers.getContractAt("MockPriceFeed", deployed.feed);
@@ -27,33 +28,41 @@ task("status", "Get summery stats")
       token.balanceOf(signer.address)
     ]);
     console.log(`💰 Token: ${name} (${symbol})`);
-    console.log(`   Total Supply: ${ethers.formatEther(supply)} PETAI`);
-    console.log(`   Your Balance: ${ethers.formatEther(balance)} PETAI\n`);
+    console.log(`   Total Supply: ${ethers.formatEther(supply)} CNU`);
+    console.log(`   Your Balance: ${ethers.formatEther(balance)} CNU\n`);
   
-    const [charityBal, stakingBal] = await Promise.all([
+    const [treasuryBal, charityBal, stakingBal] = await Promise.all([
+      token.balanceOf(treasuryVault),
       token.balanceOf(charityVault),
       token.balanceOf(stakingVault),
     ]);
 
     // === Vault ===
-    const [staked, penalty, receiver, paused] = await stakingVault.getVaultStats();
+    const [totalStaked, earlyWithdrawPenalty, charityVaultAddress, stakingPaused] = await stakingVault.getVaultStats();
+    const [totalLiabilities, isFinalized] = await Promise.all([
+      stakingVault.totalLiabilities(),
+      stakingVault.isFinalized(),
+    ]);
     console.log("🏦 Staking Vault:");
-    console.log(`   Total Staked: ${ethers.formatEther(staked)} PETAI`);
-    console.log(`   Total Funded: ${ethers.formatEther(stakingBal - staked)} PETAI`);
-    console.log(`   Penalty Rate: ${penalty / 100n}%`);
-    console.log(`   Penalty Receiver: ${receiver}`);
-    console.log(`   Staking Paused: ${paused}\n`);
+    console.log(`   Total Staked: ${ethers.formatEther(totalStaked)} CNU`);
+    console.log(`   Total Funded: ${ethers.formatEther(stakingBal - totalStaked)} CNU`);
+    console.log(`   Total Liabilities: ${ethers.formatEther(totalLiabilities)} CNU`);
+    console.log(`   Penalty Rate: ${earlyWithdrawPenalty / 100n}%`);
+    console.log(`   Charity Vault (penalty receiver): ${charityVaultAddress}`);
+    console.log(`   Staking Paused: ${stakingPaused}`);
+    console.log(`   Finalized: ${isFinalized}\n`);
   
 
 
     console.log("📦 Vaults:");
-    console.log(`   Charity: ${ethers.formatEther(charityBal)} PETAI`);
-    console.log(`   Staking: ${ethers.formatEther(stakingBal)} PETAI\n`);
+    console.log(`   Treasury: ${ethers.formatEther(treasuryBal)} CNU`);
+    console.log(`   Charity: ${ethers.formatEther(charityBal)} CNU`);
+    console.log(`   Staking: ${ethers.formatEther(stakingBal)} CNU\n`);
   
     // === Oracle ===
     const price= await feed.getLatestPrice();
     const usd = Number(price) / 1e18;
-    console.log(`📉 Price: $${usd.toFixed(9)} / PETAI\n`);
+    console.log(`📉 Price: $${usd.toFixed(9)} / CNU\n`);
   
     // === Gating ===
   

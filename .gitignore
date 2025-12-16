@@ -11,6 +11,9 @@ node_modules/*
 deps/
 states/
 
+AGENTS.md
+docs/prompts
+
 *.dbg.json
 *.tsbuildinfo
 
@@ -18,3 +21,8 @@ states/
 *.og
 .env
 .env.local
+
+.vscode
+.vscode-insiders
+.code
+.code-insiders

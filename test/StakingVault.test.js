@@ -16,6 +16,8 @@ describe("StakingVault", function () {
 
     it("Allows staking and emit event", async () => {
       const amt = ethers.parseUnits("1000", 18);
+      const rewardReserve = amt * 100n / 10000n;
+      await token.transfer(stakingVault, rewardReserve);
       await token.transfer(user1, amt);
       await token.connect(user1).approve(stakingVault, amt);
       await expect(stakingVault.connect(user1).stake(amt, 1)) // Tier 30d
@@ -97,13 +99,20 @@ describe("StakingVault", function () {
   
     it("Calculates earned rewards correctly for each stake", async () => {
       const amt = ethers.parseUnits("500000", 18);
+      const stakePart = amt / 4n;
+      const totalRewards =
+        (stakePart * 100n) / 10000n +
+        (stakePart * 300n) / 10000n +
+        (stakePart * 700n) / 10000n +
+        (stakePart * 1500n) / 10000n;
+      await token.transfer(stakingVault, totalRewards);
       await token.transfer(user1, amt);
       await token.connect(user1).approve(stakingVault, amt);
   
-      await stakingVault.connect(user1).stake(amt / 4n, 1); // 30d, 2%
-      await stakingVault.connect(user1).stake(amt / 4n, 2); // 90d, 5%
-      await stakingVault.connect(user1).stake(amt / 4n, 3); // 180d, 10%
-      await stakingVault.connect(user1).stake(amt / 4n, 4); // 365d, 15%
+      await stakingVault.connect(user1).stake(stakePart, 1); // 30d, 2%
+      await stakingVault.connect(user1).stake(stakePart, 2); // 90d, 5%
+      await stakingVault.connect(user1).stake(stakePart, 3); // 180d, 10%
+      await stakingVault.connect(user1).stake(stakePart, 4); // 365d, 15%
 
       expect(await stakingVault.earned(user1, 0)).to.equal(0n);
       expect(await stakingVault.earned(user1, 1)).to.equal(0n);
@@ -171,6 +180,8 @@ describe("StakingVault", function () {
   describe("Claiming", function () {
     it("Reverts if not unlocked", async () => {
       const amount = ethers.parseUnits("1000", 18);
+      const rewardReserve = amount * 100n / 10000n;
+      await token.transfer(stakingVault, rewardReserve);
       await token.transfer(user1, amount);
       await token.connect(user1).approve(stakingVault, amount);
       await stakingVault.connect(user1).stake(amount, 1); // Tier 30d
@@ -179,6 +190,8 @@ describe("StakingVault", function () {
 
     it("Reverts if claim is called with invalid stake ID", async () => {
       const amount = ethers.parseUnits("1000", 18);
+      const rewardReserve = amount * 100n / 10000n;
+      await token.transfer(stakingVault, rewardReserve);
     
       // Stake a valid one so user1 has a stake[0], but no stake[1]
       await token.transfer(user1, amount);
@@ -193,6 +206,8 @@ describe("StakingVault", function () {
 
     it("Reverts earlyWithdraw if stake is already unlocked", async () => {
       const amount = ethers.parseUnits("1000", 18);
+      const rewardReserve = amount * 100n / 10000n;
+      await token.transfer(stakingVault, rewardReserve);
       await token.transfer(user1, amount);
       await token.connect(user1).approve(stakingVault, amount);
       await stakingVault.connect(user1).stake(amount, 1); // Tier 1 = 30 days
@@ -207,6 +222,8 @@ describe("StakingVault", function () {
     
     it("Reverts claim if stake is still locked", async () => {
       const amount = ethers.parseUnits("1000", 18);
+      const rewardReserve = amount * 100n / 10000n;
+      await token.transfer(stakingVault, rewardReserve);
       await token.transfer(user1, amount);
       await token.connect(user1).approve(stakingVault, amount);
       await stakingVault.connect(user1).stake(amount, 1); // Tier 1 = 30 days
@@ -284,6 +301,38 @@ describe("StakingVault", function () {
       expect(stakers).to.not.include(user1.address);
     });
 
+    it("Maintains stakerList integrity when removing non-last staker", async () => {
+
+      const stakeAmount = ethers.parseUnits("1000", 18);
+      const rewardReserve = (stakeAmount * 2n * 100n) / 10000n; // Two stakes at 1% (30d tier)
+      await token.transfer(stakingVault, rewardReserve);
+
+      await token.transfer(user1, stakeAmount);
+      await token.transfer(user2, stakeAmount);
+      await token.connect(user1).approve(stakingVault, stakeAmount);
+      await token.connect(user2).approve(stakingVault, stakeAmount);
+
+      await stakingVault.connect(user1).stake(stakeAmount, 1);
+      await stakingVault.connect(user2).stake(stakeAmount, 1);
+
+      let stakers = await stakingVault.getAllStakers();
+      expect(stakers).to.deep.equal([user1.address, user2.address]);
+
+      await time.increase(31 * 24 * 60 * 60);
+      await stakingVault.connect(user1).claim(0);
+
+      expect(await stakingVault.isStaker(user1.address)).to.equal(false);
+      expect(await stakingVault.isStaker(user2.address)).to.equal(true);
+
+      stakers = await stakingVault.getAllStakers();
+      expect(stakers).to.deep.equal([user2.address]);
+
+      await stakingVault.connect(user2).claim(0);
+      expect(await stakingVault.isStaker(user2.address)).to.equal(false);
+      stakers = await stakingVault.getAllStakers();
+      expect(stakers).to.deep.equal([]);
+    });
+
   });
 
   describe("Early Withdrawal", function () {
@@ -325,8 +374,8 @@ describe("StakingVault", function () {
       const stakeAmount = ethers.parseUnits("1000", 18);
       const rewardRate = 100n; // 1%
       const penaltyRate = 1000n; // 10%
-      const reward = stakeAmount * rewardRate / 10000n; // 20 PETAI
-      const penalty = stakeAmount * penaltyRate / 10000n; // 100 PETAI
+      const reward = stakeAmount * rewardRate / 10000n; // 20 CNU
+      const penalty = stakeAmount * penaltyRate / 10000n; // 100 CNU
       const refund = stakeAmount - penalty;
     
       const totalFunding = reward + ethers.parseUnits("500", 18); // extra buffer
@@ -361,6 +410,34 @@ describe("StakingVault", function () {
     
   });
 
+  describe("Liability Tracking", function () {
+    it("Tracks total liabilities incrementally", async () => {
+      const stake1 = ethers.parseUnits("1000", 18); // Tier 1: 30d @ 1%
+      const stake2 = ethers.parseUnits("2000", 18); // Tier 2: 90d @ 3%
+
+      const reward1 = stake1 * 100n / 10000n;
+      const reward2 = stake2 * 300n / 10000n;
+
+      // Fund vault with rewards for claim()
+      await token.transfer(stakingVault, reward1 + reward2);
+
+      await token.transfer(user1, stake1 + stake2);
+      await token.connect(user1).approve(stakingVault.target, stake1 + stake2);
+
+      await stakingVault.connect(user1).stake(stake1, 1);
+      await stakingVault.connect(user1).stake(stake2, 2);
+
+      expect(await stakingVault.getTotalLiabilities()).to.equal(reward1 + reward2);
+
+      await time.increase(31 * 24 * 60 * 60);
+      await stakingVault.connect(user1).claim(0);
+      expect(await stakingVault.getTotalLiabilities()).to.equal(reward2);
+
+      await stakingVault.connect(user1).earlyWithdraw(1);
+      expect(await stakingVault.getTotalLiabilities()).to.equal(0);
+    });
+  });
+
   describe("User Summary Views", function () {
     it("Returns accurate data for getUserSummary and getUserOwed", async () => {
       const stake1 = ethers.parseUnits("1000", 18); // Tier 1: 30d @ 1%
@@ -386,11 +463,13 @@ describe("StakingVault", function () {
   
       const summary = await stakingVault.getUserSummary(user1.address);
       const owed = await stakingVault.getUserOwed(user1.address);
+      const claimableAll = await stakingVault.getUserClaimableNowAll(user1.address);
       
       expect(summary[0]).to.equal(totalStake);
       expect(summary[1]).to.equal(totalRewards);
       expect(summary[2]).to.equal(totalStake + totalRewards);
       expect(owed).to.equal(totalStake + totalRewards);
+      expect(claimableAll).to.equal(totalStake + totalRewards);
     });
   });
 

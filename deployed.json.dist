@@ -1,6 +1,7 @@
 {
   "hardhat": {
     "token": "",
+    "treasury": "",
     "charity": "",
     "staking": "",
     "feed": "",
@@ -10,6 +11,7 @@
   },
   "sepolia": {
     "token": "",
+    "treasury": "",
     "charity": "",
     "staking": "",
     "feed": "",
@@ -19,6 +21,7 @@
   },
   "mainnet": {
     "token": "",
+    "treasury": "",
     "charity": "",
     "staking": "",
     "feed": "",
@@ -27,4 +30,3 @@
     "UniswapV2Router02": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
   }
 }
-

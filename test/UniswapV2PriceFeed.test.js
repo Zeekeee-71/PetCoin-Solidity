@@ -73,5 +73,17 @@ describe("UniswapV2PriceFeed (mocked)", function () {
     const delta = await feed.getTimeSinceUpdate();
     expect(delta).to.be.closeTo(180, 2);
   });
-});
 
+  it("does not overflow in counterfactual cumulative price math", async () => {
+    const maxUint112 = (1n << 112n) - 1n;
+
+    await mockPair.setCumulativePrices(0, 0);
+    await mockPair.setReserves(1, maxUint112);
+
+    const Feed = await ethers.getContractFactory("UniswapV2PriceFeed");
+    const bigFeed = await Feed.deploy(mockPair);
+
+    await time.increase(3600);
+    await expect(bigFeed.update()).to.not.be.reverted;
+  });
+});

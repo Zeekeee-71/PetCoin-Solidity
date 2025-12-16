@@ -1,5 +1,9 @@
 {
   "name": "hardhat-project",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/n17r4m/CNU.git"
+  },
   "dependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

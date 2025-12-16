@@ -1,12 +1,12 @@
-# 🐾 PetCoinAI
+# Companion Network Unit (CNU)
 
-**PetCoinAI** is a purpose-driven ERC-20 token and staking ecosystem built on Ethereum (and tested on Sepolia) that combines blockchain technology with meaningful real-world impact. Every transaction supports animal welfare through automatic donations, burns, and user rewards. This repo contains the core Solidity contracts, test suite, deployment tools, and Uniswap integration code for the project.
+**Companion Network Unit (CNU)** is a purpose-driven ERC-20 token and staking ecosystem built on Ethereum (and tested on Sepolia) that combines blockchain technology with meaningful real-world impact. Every transaction supports animal welfare through automatic donations, burns, and user rewards. This repo contains the core Solidity contracts, test suite, deployment tools, and Uniswap integration code for the project.
 
 ---
 
-## 🌍 What Is PetCoinAI?
+## 🌍 What Is CNU?
 
-PetCoinAI (ticker: `PETAI`) is a hybrid utility and charity token designed to:
+Companion Network Unit (ticker: `CNU`) is a hybrid utility and charity token designed to:
 
 - Fund animal rescue and welfare organizations via **automatic fee routing**
 - Reward long-term holders with **staking incentives and tier-based benefits**
@@ -28,11 +28,12 @@ This monorepo includes:
 
 | Contract             | Purpose                                                                 |
 |----------------------|-------------------------------------------------------------------------|
-| `PetCoinAI.sol`      | The core ERC-20 token with fee mechanics, vault routing, pause control |
+| `CNU.sol`      | The core ERC-20 token with fee mechanics, vault routing, pause control |
+| `TreasuryVault.sol` | Bulk CNU storage for treasury payouts, claims, and migrations          |
 | `StakingVault.sol`   | Multi-stake reward vault with tiered lock durations and finalization   |
 | `CharityVault.sol`   | Donation receiver, distributor, and migratable charity sink            |
-| `UniswapV2PriceFeed.sol` | TWAP-based price oracle for PETAI from Uniswap V2 liquidity pool   |
-| `AccessGating.sol`   | Role-based gating using USD-valued PETAI holdings                      |
+| `UniswapV2PriceFeed.sol` | TWAP-based price oracle for CNU from Uniswap V2 liquidity pool   |
+| `AccessGating.sol`   | Role-based gating using USD-valued CNU holdings                      |
 
 ### Test Suite
 
@@ -111,7 +112,7 @@ npx hardhat update-feed --network sepolia
 
 ## 📊 Governance and Access
 
-PETAI holders receive **Access Tiers** based on their USD-equivalent holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
+CNU holders receive **Access Tiers** based on their USD-equivalent holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
 
 | Tier     | Threshold (USD) |
 | -------- | --------------- |
@@ -127,24 +128,16 @@ PETAI holders receive **Access Tiers** based on their USD-equivalent holdings us
 
 We welcome open source contributions! Whether you're improving gas efficiency, fixing tests, or helping build the frontend dApp — thank you for helping animals and pushing crypto forward.
 
-To get started:
-
-```bash
-git clone https://github.com/your-org/PetCoinAI.git
-cd PetCoinAI
-```
-
 Please open issues or pull requests, and feel free to reach out with proposals.
 
 ---
 
 ## 📜 License
 
-MIT License — see `LICENSE` file.
+MIT license — see `LICENSE` file.
 
 ---
 
 ## 🐾 About
 
-PetCoinAI is built by a small team of technologists and animal lovers. We believe that **blockchain can do good**, and we're committed to using smart contract transparency to improve how charitable crypto is done.
-
+Companion Network Unit is built by a small team of technologists and animal lovers. We believe that **blockchain can do good**, and we're committed to using smart contract transparency to improve how charitable crypto is done.

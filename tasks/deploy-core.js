@@ -15,11 +15,11 @@ task("deploy-core", "Deploy core contracts")
 
     console.log(`🚀 Deploying contracts from: ${signer.address}`);
 
-    // 1. Deploy PETAI token
-    const TokenFactory = await ethers.getContractFactory("PetCoinAI");
+    // 1. Deploy CNU token
+    const TokenFactory = await ethers.getContractFactory("CNU");
     const token = await TokenFactory.deploy(ethers.parseUnits("1000000000000", 18));
     await token.waitForDeployment();
-    console.log(`💰 PetCoinAI deployed at: ${token.target}`);
+    console.log(`💰 CNU deployed at: ${token.target}`);
 
     // 1.2. Set Wallet Limit 
     await token.setWalletLimit(ethers.parseUnits("10000000000", 18)); // Ten Billion in 18 decimals
@@ -28,6 +28,12 @@ task("deploy-core", "Deploy core contracts")
     // 1.3. Set Transaction Limit 
     await token.setTxLimit(ethers.parseUnits("1000000000", 18)); // One Billion in 18 decimals
     console.log(`🔒 Transaction limit set`);
+
+    // 1.4. Deploy Treasury Vault
+    const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
+    const treasuryVault = await TreasuryVaultFactory.deploy(token);
+    await token.setTreasuryVault(treasuryVault);
+    console.log(`🏦 TreasuryVault deployed at: ${treasuryVault.target}`);
 
     // 2. Deploy Charity Vault
     const CharityVaultFactory = await ethers.getContractFactory("CharityVault");
@@ -61,6 +67,7 @@ task("deploy-core", "Deploy core contracts")
     deployed.token = token.target;
     deployed.charity = charityVault.target;
     deployed.staking = stakingVault.target;
+    deployed.treasury = treasuryVault.target;
     deployed.feed = feed.target;
     deployed.gate = gate.target;
 

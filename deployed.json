@@ -1,6 +1,7 @@
 {
   "hardhat": {
     "token": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "treasury": "",
     "charity": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
     "staking": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
     "feed": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
@@ -11,6 +12,7 @@
   },
   "sepolia": {
     "token": "0xeb7011dFdcBFcCDa41B45cf24C145F265DCBd202",
+    "treasury": "",
     "charity": "0x08f9fC6B6cCaA0bA4fEf62B172B4D727F220f7C6",
     "staking": "0x51724769E03243194F7196c77053CCeD5476F898",
     "feed": "0x89B2a95347F64D56E3F54B274d8131cAe4A19183",
@@ -22,6 +24,7 @@
   },
   "mainnet": {
     "token": "",
+    "treasury": "",
     "charity": "",
     "staking": "",
     "feed": "",

@@ -69,7 +69,7 @@ describe("Uniswap Router", function () {
     const oldTokBal = await token.balanceOf(user1);
     const oldEthBal = await weth.balanceOf(user1);
 
-    console.log("Old PETAI balance:", ethers.formatUnits(oldTokBal, 18));
+    console.log("Old CNU balance:", ethers.formatUnits(oldTokBal, 18));
     console.log("Old WETH balance:", ethers.formatUnits(oldEthBal, 18));
 
     await weth.connect(user1).approve(router.target, amountIn);
@@ -99,7 +99,7 @@ describe("Uniswap Router", function () {
     const oldTokBal = await token.balanceOf(user1);
     const oldEthBal = await weth.balanceOf(user1);
 
-    console.log("Old PETAI balance:", ethers.formatUnits(oldTokBal, 18));
+    console.log("Old CNU balance:", ethers.formatUnits(oldTokBal, 18));
     console.log("Old WETH balance:", ethers.formatUnits(oldEthBal, 18));
 
     await token.connect(user1).approve(router.target, amountIn * 2n);

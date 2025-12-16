@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "hardhat/console.sol";
 
 interface IStakingVault {
     function receiveFee(uint256 amount) external;
@@ -18,22 +17,36 @@ interface ICharityVault {
     function migrateTo(address newVault) external;
 }
 
-interface IVault {
-    function isVault() external returns (bool);
+interface ITreasuryVault {
+    function migrateTo(address newVault) external;
 }
 
-contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
+interface IVault {
+    function isVault() external view returns (bool);
+}
+
+contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
     uint256 private constant FEE_DENOMINATOR = 10000;
 
-    uint256 public constant CHARITY_FEE = 100;    // 1%
-    uint256 public constant BURN_FEE = 50;       // 0.5%
-    uint256 public constant REWARDS_FEE = 200;    // 2%
+    uint256 public charityFee = 100;    // 1%
+    uint256 public burnFee = 50;        // 0.5%
+    uint256 public rewardsFee = 200;    // 2%
 
     uint256 public maxWalletSize;
     uint256 public maxTxSize;
 
+    address public treasuryVault;
     address public charityVault;
     address public stakingVault;
+
+    address[] private stakingVaultHistory;
+    mapping(address => bool) private isStakingVaultInHistory;
+
+    address[] private charityVaultHistory;
+    mapping(address => bool) private isCharityVaultInHistory;
+
+    address[] private treasuryVaultHistory;
+    mapping(address => bool) private isTreasuryVaultInHistory;
 
     uint256 public totalCharityDistributed;
     uint256 public totalRewardsDistributed;
@@ -42,20 +55,58 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
     mapping(address => bool) public isExcludedFromLimits;
 
     event FeesTaken(address indexed from, uint256 charity, uint256 burn, uint256 rewards);
+    event FeesUpdated(uint256 burnFee, uint256 charityFee, uint256 rewardsFee);
     event FeeExclusionUpdated(address indexed user, bool isExcluded);
     event LimitExclusionUpdated(address indexed user, bool isExcluded);
     event StakingVaultUpdated(address newVault);
+    event StakingVaultHistoryAdded(address indexed vault);
+    event CharityVaultHistoryAdded(address indexed vault);
+    event TreasuryVaultHistoryAdded(address indexed vault);
+    event TreasuryVaultUpdated(address newVault);
     event CharityVaultUpdated(address newVault);
     event TxLimitUpdated(uint256 txLimit);
     event WalletLimitUpdated(uint256 walletLimit);
 
-    constructor(uint256 initialSupply) ERC20("Pet Coin AI", "PETAI") Ownable(msg.sender) {
+    constructor(uint256 initialSupply) ERC20("Companion Network Unit", "CNU") Ownable(msg.sender) {
         // uint256 initialSupply = 1_000_000_000_000 * 10 ** decimals(); // 1 trillion
         _mint(msg.sender, initialSupply);
         isExcludedFromFees[msg.sender] = true;
         isExcludedFromFees[address(this)] = true;
         isExcludedFromLimits[msg.sender] = true;
         isExcludedFromLimits[address(this)] = true;
+    }
+
+    function getStakingVaultHistory() external view returns (address[] memory) {
+        return stakingVaultHistory;
+    }
+
+    function getCharityVaultHistory() external view returns (address[] memory) {
+        return charityVaultHistory;
+    }
+
+    function getTreasuryVaultHistory() external view returns (address[] memory) {
+        return treasuryVaultHistory;
+    }
+
+    function _recordStakingVault(address vault) internal {
+        if (vault == address(0) || isStakingVaultInHistory[vault]) return;
+        isStakingVaultInHistory[vault] = true;
+        stakingVaultHistory.push(vault);
+        emit StakingVaultHistoryAdded(vault);
+    }
+
+    function _recordCharityVault(address vault) internal {
+        if (vault == address(0) || isCharityVaultInHistory[vault]) return;
+        isCharityVaultInHistory[vault] = true;
+        charityVaultHistory.push(vault);
+        emit CharityVaultHistoryAdded(vault);
+    }
+
+    function _recordTreasuryVault(address vault) internal {
+        if (vault == address(0) || isTreasuryVaultInHistory[vault]) return;
+        isTreasuryVaultInHistory[vault] = true;
+        treasuryVaultHistory.push(vault);
+        emit TreasuryVaultHistoryAdded(vault);
     }
 
     function excludeFromFees(address account, bool excluded) external onlyOwner {
@@ -68,7 +119,18 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit LimitExclusionUpdated(account, excluded);
     }
 
-    function isVault(address _maybeVault) internal returns (bool) {
+    function setFees(uint256 newBurnFee, uint256 newCharityFee, uint256 newRewardsFee) external onlyOwner {
+        uint256 totalFeeBps = newBurnFee + newCharityFee + newRewardsFee;
+        require(totalFeeBps <= 700, "Total fee exceeds limit");
+
+        burnFee = newBurnFee;
+        charityFee = newCharityFee;
+        rewardsFee = newRewardsFee;
+
+        emit FeesUpdated(burnFee, charityFee, rewardsFee);
+    }
+
+    function isVault(address _maybeVault) internal view returns (bool) {
         try IVault(_maybeVault).isVault() returns (bool result) {
             return result;
         } catch {
@@ -85,10 +147,27 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
         isExcludedFromLimits[_vault] = true;
         address prevVault = charityVault;
         charityVault = _vault;
+        _recordCharityVault(charityVault);
         if(address(prevVault) != address(0)){
             ICharityVault(prevVault).migrateTo(charityVault);
         }
         emit CharityVaultUpdated(charityVault);
+    }
+
+    function setTreasuryVault(address _vault) external onlyOwner {
+        require(_vault != address(0), "Invalid treasury vault address");
+        require(_vault != treasuryVault, "Same treasury vault address");
+        require(_vault.code.length > 0, "Vault must be a contract");
+        require(isVault(_vault), "Invalid vault interface");
+        isExcludedFromFees[_vault] = true;
+        isExcludedFromLimits[_vault] = true;
+        address prevVault = treasuryVault;
+        treasuryVault = _vault;
+        _recordTreasuryVault(treasuryVault);
+        if(address(prevVault) != address(0)){
+            ITreasuryVault(prevVault).migrateTo(treasuryVault);
+        }
+        emit TreasuryVaultUpdated(treasuryVault);
     }
 
     function setStakingVault(address _vault) external onlyOwner {
@@ -100,6 +179,7 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
         isExcludedFromLimits[_vault] = true;
         address prevVault = stakingVault;
         stakingVault = _vault;
+        _recordStakingVault(stakingVault);
         if(address(prevVault) != address(0)){
             IStakingVault(prevVault).migrateTo(stakingVault);
         }
@@ -107,14 +187,14 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     function setWalletLimit(uint256 _maxWallet) external onlyOwner {
-        require(_maxWallet > 1_000_000 * 10 ** decimals(), "Maximum wallet size too small");
+        require(_maxWallet > 10_000_000 * 10 ** decimals(), "Maximum wallet size too small");
         require(_maxWallet < 50_000_000_000 * 10 ** decimals(), "Maximum wallet size too large");
         maxWalletSize = _maxWallet;
         emit WalletLimitUpdated(maxWalletSize);
     }
 
     function setTxLimit(uint256 _maxTx) external onlyOwner {
-        require(_maxTx > 1_000_000 * 10 ** decimals(), "Maximum transaction size too small");
+        require(_maxTx > 10_000_000 * 10 ** decimals(), "Maximum transaction size too small");
         require(_maxTx < 10_000_000_000 * 10 ** decimals(), "Maximum transaction size too large");
         maxTxSize = _maxTx;
         emit TxLimitUpdated(maxTxSize);
@@ -140,12 +220,14 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
             return;
         }
 
-        // ---- 2) Compute fees first (prevents rounding drift) ----
-        uint256 burnAmount    = (amount * BURN_FEE)    / FEE_DENOMINATOR;
-        uint256 charityAmount = (amount * CHARITY_FEE) / FEE_DENOMINATOR;
-        uint256 rewardsAmount = (amount * REWARDS_FEE) / FEE_DENOMINATOR;
+        // ---- 2) Compute total fee first (captures rounding remainder) ----
+        uint256 totalFeeBps = burnFee + charityFee + rewardsFee;
+        uint256 feeAmount = (amount * totalFeeBps) / FEE_DENOMINATOR;
 
-        uint256 feeAmount      = burnAmount + charityAmount + rewardsAmount;
+        uint256 burnAmount    = (amount * burnFee)    / FEE_DENOMINATOR;
+        uint256 charityAmount = (amount * charityFee) / FEE_DENOMINATOR;
+        uint256 rewardsAmount = feeAmount - burnAmount - charityAmount;
+
         uint256 transferAmount = amount - feeAmount;
 
         // ---- 3) Limits ----
@@ -158,7 +240,8 @@ contract PetCoinAI is ERC20, Ownable, Pausable, ReentrancyGuard {
             bool checkMaxWallet = (
                 to != address(0) &&
                 to != charityVault &&
-                to != stakingVault
+                to != stakingVault &&
+                to != treasuryVault
             );
             if (checkMaxWallet) {
                 require(balanceOf(to) + transferAmount <= maxWalletSize, "Exceeds max wallet size");

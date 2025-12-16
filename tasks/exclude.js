@@ -10,7 +10,7 @@ task("exclude", "Retrieve a balance")
 
     console.info(deployed)
 
-    const token = await ethers.getContractAt("PetCoinAI", deployed.token);
+    const token = await ethers.getContractAt("CNU", deployed.token);
   
     await token.excludeFromFees(wallet, exclude);
 
