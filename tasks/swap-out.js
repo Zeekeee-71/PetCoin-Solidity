@@ -1,11 +1,12 @@
 const addressesFor = require("../lib/addresses");
 const { routerV3ABI } = require("../lib/uniswap");
 
-task("swap-out", "Swap CNU for WETH using Uniswap V3")
+task("swap-out", "Swap CNU for quote token using Uniswap V3")
   .addPositionalParam("amountIn", "Amount of CNU to swap", "1000")
+  .addOptionalParam("quote", "Quote token address (defaults to deployed.quote or deployed.weth)", "")
   .addOptionalParam("fee", "Pool fee tier", "")
   .addOptionalPositionalParam("from", "signerIdx", "0")
-  .setAction(async ({ amountIn, fee, from }, hre) => {
+  .setAction(async ({ amountIn, quote, fee, from }, hre) => {
     const { ethers } = hre;
     const deployed = addressesFor(hre.network.name);
 
@@ -22,8 +23,17 @@ task("swap-out", "Swap CNU for WETH using Uniswap V3")
       return;
     }
 
+    const quoteTokenAddress = quote || deployed.quote || deployed.weth;
+    if (!quoteTokenAddress) {
+      console.error("❌ Missing quote token (set deployed.quote or pass --quote).");
+      return;
+    }
+
     const router = await ethers.getContractAt(routerV3ABI, deployed.UniswapV3SwapRouter);
-    const weth = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
+    const quoteToken = await ethers.getContractAt(
+      "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol:IERC20Metadata",
+      quoteTokenAddress
+    );
     const cnu = await ethers.getContractAt("CNU", deployed.token);
 
     const feeTier = fee ? Number.parseInt(fee, 10) : (deployed.poolFee || 3000);
@@ -33,12 +43,12 @@ task("swap-out", "Swap CNU for WETH using Uniswap V3")
     const approval = await cnu.connect(signer).approve(router.target, cnuAmount);
     await approval.wait();
 
-    console.log(`🚀 Swapping ${ethers.formatEther(cnuAmount)} CNU for WETH...`);
+    console.log(`🚀 Swapping ${ethers.formatEther(cnuAmount)} CNU for quote tokens...`);
 
     try {
       const tx = await router.connect(signer).exactInputSingle({
         tokenIn: deployed.token,
-        tokenOut: deployed.weth,
+        tokenOut: quoteTokenAddress,
         fee: feeTier,
         recipient: signer.address,
         deadline,
@@ -50,8 +60,9 @@ task("swap-out", "Swap CNU for WETH using Uniswap V3")
       const receipt = await tx.wait();
       console.log(`✅ Swap complete. Tx hash: ${receipt.hash}`);
 
-      const newBal = await weth.connect(signer).balanceOf(signer.address);
-      console.log(`💰 New WETH balance: ${ethers.formatUnits(newBal, 18)} WETH`);
+      const newBal = await quoteToken.connect(signer).balanceOf(signer.address);
+      const quoteDecimals = await quoteToken.decimals();
+      console.log(`💰 New quote balance: ${ethers.formatUnits(newBal, quoteDecimals)}`);
     } catch (err) {
       console.error("❌ Swap failed.");
       if (err?.reason) {

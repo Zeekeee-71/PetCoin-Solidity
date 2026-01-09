@@ -12,6 +12,11 @@ task("repl", "Launch interactive Hardhat REPL")
     const [deployer, alt, tri] = signers;
     const deployed = addressesFor(hre.network.name);
 
+    const quoteAddress = deployed.quote || deployed.weth;
+    const quoteToken = quoteAddress
+      ? await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", quoteAddress, deployer)
+      : null;
+
     const context = {
       // Hardhat
       ethers,
@@ -27,7 +32,10 @@ task("repl", "Launch interactive Hardhat REPL")
       signers,
       // Contracts
       token: await ethers.getContractAt("CNU", deployed.token, deployer),
-      weth: await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth, deployer),
+      weth: deployed.weth
+        ? await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth, deployer)
+        : null,
+      quote: quoteToken,
       charity: await ethers.getContractAt("CharityVault", deployed.charity, deployer),
       staking: await ethers.getContractAt("StakingVault", deployed.staking, deployer),
       feed: await ethers.getContractAt("UniswapV3PriceFeed", deployed.feed, deployer),

@@ -94,7 +94,7 @@ For local development, just use local hardhat node!
 npx hardhat deploy-core --network sepolia
 ```
 
-Add a Uniswap V3 pool:
+Add a Uniswap V3 pool (CNU/quote):
 
 ```bash
 npx hardhat create-pair --network sepolia
@@ -108,11 +108,13 @@ npx hardhat deploy-feed --pool 0xYourPool --network sepolia
 npx hardhat update-feed --network sepolia
 ```
 
+For non-WETH quotes (USDC, GNO, etc.), pass `--quote` on pool/liquidity/swap tasks and ensure `deployed.json` has `quote` set to that token. Use `--amountQuote` with the quote token’s decimals.
+
 ---
 
 ## 📊 Governance and Access
 
-CNU holders receive **Access Tiers** based on their USD-equivalent holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
+CNU holders receive **Access Tiers** based on their USD-equivalent holdings using Uniswap TWAP pricing. If your quote token is not USD-pegged (e.g. WETH), set thresholds accordingly or use a USD quote pool.
 
 | Tier     | Threshold (USD) |
 | -------- | --------------- |

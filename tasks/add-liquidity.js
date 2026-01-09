@@ -1,14 +1,15 @@
 const addressesFor = require("../lib/addresses");
 const { poolV3ABI, positionManagerV3ABI } = require("../lib/uniswap");
 
-task("add-liquidity", "Adds liquidity to the CNU/WETH pool on Uniswap V3")
+task("add-liquidity", "Adds liquidity to the CNU/quote pool on Uniswap V3")
   .addParam("amountCnu", "Amount of CNU to add", "1000000", types.string)
-  .addParam("amountWeth", "Amount of WETH to add", "1", types.string)
+  .addParam("amountQuote", "Amount of quote token to add", "1", types.string)
+  .addOptionalParam("quote", "Quote token address (defaults to deployed.quote or deployed.weth)", "")
   .addOptionalParam("fee", "Pool fee tier (e.g. 500, 3000, 10000)", "")
   .addOptionalParam("tickLower", "Lower tick (optional, must match spacing)", "")
   .addOptionalParam("tickUpper", "Upper tick (optional, must match spacing)", "")
   .addFlag("skipExemptions", "Skip fee/limit exemptions for the pool")
-  .setAction(async ({ amountCnu, amountWeth, fee, tickLower, tickUpper, skipExemptions }, hre) => {
+  .setAction(async ({ amountCnu, amountQuote, quote, fee, tickLower, tickUpper, skipExemptions }, hre) => {
     const { ethers } = hre;
     const fs = require("fs");
     const path = require("path");
@@ -16,9 +17,10 @@ task("add-liquidity", "Adds liquidity to the CNU/WETH pool on Uniswap V3")
     const deployed = addressesFor(hre.network.name);
     const poolAddress = deployed.pool;
     const positionManagerAddress = deployed.UniswapV3PositionManager;
+    const quoteTokenAddress = quote || deployed.quote || deployed.weth;
 
-    if (!poolAddress || !positionManagerAddress) {
-      console.error("❌ Missing pool or UniswapV3PositionManager in deployed.json.");
+    if (!poolAddress || !positionManagerAddress || !quoteTokenAddress) {
+      console.error("❌ Missing pool, quote token, or UniswapV3PositionManager in deployed.json.");
       return;
     }
 
@@ -26,7 +28,10 @@ task("add-liquidity", "Adds liquidity to the CNU/WETH pool on Uniswap V3")
 
     const [signer] = await ethers.getSigners();
     const token = await ethers.getContractAt("CNU", deployed.token);
-    const wethToken = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
+    const quoteToken = await ethers.getContractAt(
+      "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol:IERC20Metadata",
+      quoteTokenAddress
+    );
     const pool = await ethers.getContractAt(poolV3ABI, poolAddress);
     const positionManager = await ethers.getContractAt(positionManagerV3ABI, positionManagerAddress);
 
@@ -36,20 +41,21 @@ task("add-liquidity", "Adds liquidity to the CNU/WETH pool on Uniswap V3")
     }
 
     const amountCnuParsed = ethers.parseUnits(amountCnu, 18);
-    const amountWethParsed = ethers.parseUnits(amountWeth, 18);
+    const quoteDecimals = await quoteToken.decimals();
+    const amountQuoteParsed = ethers.parseUnits(amountQuote, quoteDecimals);
 
     const token0 = await pool.token0();
     const token1 = await pool.token1();
 
     const amount0Desired = token0.toLowerCase() === deployed.token.toLowerCase()
       ? amountCnuParsed
-      : amountWethParsed;
+      : amountQuoteParsed;
     const amount1Desired = token1.toLowerCase() === deployed.token.toLowerCase()
       ? amountCnuParsed
-      : amountWethParsed;
+      : amountQuoteParsed;
 
     await token.approve(positionManager.target, amount0Desired + amount1Desired);
-    await wethToken.approve(positionManager.target, amount0Desired + amount1Desired);
+    await quoteToken.approve(positionManager.target, amount0Desired + amount1Desired);
 
     const spacing = Number(await pool.tickSpacing());
     const lower = tickLower ? Number.parseInt(tickLower, 10) : Math.floor(-600 / spacing) * spacing;
@@ -91,6 +97,7 @@ task("add-liquidity", "Adds liquidity to the CNU/WETH pool on Uniswap V3")
     }
 
     deployed.poolFee = feeTier;
+    deployed.quote = quoteTokenAddress;
     const full = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "deployed.json"), "utf8"));
     full[hre.network.name] = deployed;
     fs.writeFileSync(path.join(__dirname, "..", "deployed.json"), JSON.stringify(full, null, 2));

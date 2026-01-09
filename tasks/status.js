@@ -60,9 +60,9 @@ task("status", "Get summery stats")
     console.log(`   Staking: ${ethers.formatEther(stakingBal)} CNU\n`);
   
     // === Oracle ===
-    const price= await feed.getLatestPrice();
-    const usd = Number(price) / 1e18;
-    console.log(`📉 Price: $${usd.toFixed(9)} / CNU\n`);
+    const price = await feed.getLatestPrice();
+    const quotePerCnu = Number(price) / 1e18;
+    console.log(`📉 Price: ${quotePerCnu.toFixed(9)} quote / CNU\n`);
   
     // === Gating ===
   

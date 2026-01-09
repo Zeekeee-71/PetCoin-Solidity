@@ -21,7 +21,12 @@ task("deploy-feed", "Deploy UniswapV3PriceFeed and link to AccessGating")
     }
 
     const baseToken = base || deployed.token;
-    const quoteToken = quote || deployed.weth;
+    const quoteToken = quote || deployed.quote || deployed.weth;
+
+    if (!quoteToken) {
+      console.error("❌ Missing quote token (set deployed.quote or pass --quote).");
+      return;
+    }
     const feeTier = fee ? Number.parseInt(fee, 10) : (deployed.poolFee || 0);
 
     console.log(`🚀 Deploying UniswapV3PriceFeed for pool: ${selectedPool}`);
