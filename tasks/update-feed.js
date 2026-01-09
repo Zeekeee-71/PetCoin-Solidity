@@ -1,4 +1,4 @@
-task("update-feed", "Calls update() on the UniswapV2PriceFeed contract")
+task("update-feed", "Calls update() on the UniswapV3PriceFeed contract")
   .setAction(async (_, hre) => {
     const fs = require("fs");
     const path = require("path");
@@ -10,7 +10,7 @@ task("update-feed", "Calls update() on the UniswapV2PriceFeed contract")
     const deployed = JSON.parse(deployedRaw)[hre.network.name];
 
 
-    const feed = await ethers.getContractAt("UniswapV2PriceFeed", deployed.feed);
+    const feed = await ethers.getContractAt("UniswapV3PriceFeed", deployed.feed);
 
     console.log(`📡 Calling update() on PriceFeed at ${feed.target}...`);
     try {

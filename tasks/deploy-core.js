@@ -1,5 +1,4 @@
 const addressesFor = require("../lib/addresses");
-const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
 task("deploy-core", "Deploy core contracts")
   .setAction(async (args, hre) => {

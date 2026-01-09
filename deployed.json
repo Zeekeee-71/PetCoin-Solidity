@@ -6,9 +6,13 @@
     "staking": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
     "feed": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
     "gate": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-    "UniswapV2Factory": "",
-    "UniswapV2Router02": "",
-    "weth": ""
+    "UniswapV3Factory": "",
+    "UniswapV3SwapRouter": "",
+    "UniswapV3PositionManager": "",
+    "weth": "",
+    "pool": "",
+    "poolFee": 3000,
+    "positionId": ""
   },
   "sepolia": {
     "token": "0xeb7011dFdcBFcCDa41B45cf24C145F265DCBd202",
@@ -17,10 +21,13 @@
     "staking": "0x51724769E03243194F7196c77053CCeD5476F898",
     "feed": "0x89B2a95347F64D56E3F54B274d8131cAe4A19183",
     "gate": "0xF5250328a580233D2A31c559fE434Cc2a061aff2",
-    "UniswapV2Factory": "0xF62c03E08ada871A0bEb309762E260a7a6a880E6",
-    "UniswapV2Router02": "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3",
+    "UniswapV3Factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    "UniswapV3SwapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "UniswapV3PositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     "weth": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
-    "pair": "0x409fDA7bC92CCF8e2311116Fbdf0111EA1A576Aa"
+    "pool": "",
+    "poolFee": 3000,
+    "positionId": ""
   },
   "mainnet": {
     "token": "",
@@ -29,9 +36,12 @@
     "staking": "",
     "feed": "",
     "gate": "",
-    "UniswapV2Factory": "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-    "UniswapV2Router02": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    "UniswapV3Factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    "UniswapV3SwapRouter": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "UniswapV3PositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-    "pair": ""
+    "pool": "",
+    "poolFee": 3000,
+    "positionId": ""
   }
 }

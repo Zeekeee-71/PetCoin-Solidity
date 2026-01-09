@@ -1,80 +1,59 @@
-
 const addressesFor = require("../lib/addresses");
-const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
+const { routerV3ABI } = require("../lib/uniswap");
 
-task("swap-in", "Swap WETH for CNU using fee-on-transfer-safe method")
+task("swap-in", "Swap WETH for CNU using Uniswap V3")
   .addPositionalParam("amountIn", "Amount of WETH to swap", "0.01")
+  .addOptionalParam("fee", "Pool fee tier", "")
   .addOptionalPositionalParam("from", "signerIdx", "0")
-  .setAction(async ({ amountIn, from }, hre) => {
+  .setAction(async ({ amountIn, fee, from }, hre) => {
     const { ethers } = hre;
-
     const deployed = addressesFor(hre.network.name);
 
     const signers = await ethers.getSigners();
     const signer = signers[from];
-    if(!signer) {
+    if (!signer) {
       console.error(`Signer ${from} not found`);
       return;
     }
     console.log(`Using signer ${from}: ${signer.address}`);
 
-    const router = await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02);
+    if (!deployed.UniswapV3SwapRouter) {
+      console.error("❌ Missing UniswapV3SwapRouter in deployed.json.");
+      return;
+    }
 
+    const router = await ethers.getContractAt(routerV3ABI, deployed.UniswapV3SwapRouter);
     const weth = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth);
     const cnu = await ethers.getContractAt("CNU", deployed.token);
 
+    const feeTier = fee ? Number.parseInt(fee, 10) : (deployed.poolFee || 3000);
     const wethAmount = ethers.parseEther(amountIn);
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
-    // Approve router to spend WETH
     const approval = await weth.connect(signer).approve(router.target, wethAmount);
     await approval.wait();
 
-    const allowance = await weth.connect(signer).allowance(signer.address, router.target);
-
-    console.log(`Allowance to router: ${ethers.formatEther(allowance)} WETH`);
-    const wethBalance = await weth.connect(signer).balanceOf(signer.address);
-    console.log("WETH token balance:", ethers.formatEther(wethBalance));
-    const maxWallet = await cnu.maxWalletSize();
-    const maxTx = await cnu.maxTxSize();
-    const userBal = await cnu.connect(signer).balanceOf(signer.address);
-    
-    console.log("Max wallet size:", ethers.formatUnits(maxWallet, 18));
-    console.log("Max tx size:", ethers.formatUnits(maxTx, 18));
-    console.log("User's CNU balance before swap:", ethers.formatUnits(userBal, 18));
-
-    const out = await router.connect(signer).getAmountsOut(wethAmount, [deployed.weth, deployed.token]);
-    console.log(`📈 Estimated CNU received: ${ethers.formatUnits(out[1], 18)}`);
-
     console.log(`🚀 Swapping ${ethers.formatEther(wethAmount)} WETH for CNU...`);
 
-    let tx;
     try {
-      tx = await router.connect(signer).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        wethAmount,
-        0, // accept any amount of CNU
-        [deployed.weth, deployed.token],
-        signer,
+      const tx = await router.connect(signer).exactInputSingle({
+        tokenIn: deployed.weth,
+        tokenOut: deployed.token,
+        fee: feeTier,
+        recipient: signer.address,
         deadline,
-        {gasLimit: 25000000}
-      );
-    
+        amountIn: wethAmount,
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
+
       const receipt = await tx.wait();
       console.log(`✅ Swap complete. Tx hash: ${receipt.hash}`);
-    
+
       const newBal = await cnu.connect(signer).balanceOf(signer.address);
       console.log(`💰 New CNU balance: ${ethers.formatUnits(newBal, 18)} CNU`);
-    
     } catch (err) {
-      if(!tx){
-        console.error(`⚠️ Tx undefined: ${tx}`);
-      }
-      if (tx?.hash) {
-        console.error(`⚠️ Swap failed after submission. Tx hash: ${tx.hash}`);
-      } else {
-        console.error("❌ Swap failed before transaction submitted.");
-      }
-    
+      console.error("❌ Swap failed.");
       if (err?.reason) {
         console.error(`Reason: ${err.reason}`);
       } else if (err?.message) {
@@ -83,5 +62,4 @@ task("swap-in", "Swap WETH for CNU using fee-on-transfer-safe method")
         console.error(err);
       }
     }
-
   });

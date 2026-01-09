@@ -4,30 +4,38 @@ const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers"
 const { deployEcosystem } = require("./utils/deploy");
 
 describe("E2E Scenarios", function () {
-  async function addLiquidity({ owner, token, weth, router, tokenA, tokenB }, tokenAmount, wethAmount) {
+  async function addLiquidity({ owner, token, weth, positionManager, pool, poolFee }, tokenAmount, wethAmount) {
     await weth.deposit({ value: wethAmount });
-
-    await token.approve(router, ethers.MaxUint256);
-    await weth.approve(router, ethers.MaxUint256);
-
-    const deadline = BigInt(await time.latest()) + 3600n;
 
     const tokenAddress = token.target ?? token.address;
     const wethAddress = weth.target ?? weth.address;
+    const token0 = tokenAddress.toLowerCase() < wethAddress.toLowerCase() ? tokenAddress : wethAddress;
+    const token1 = token0 === tokenAddress ? wethAddress : tokenAddress;
 
-    const tokenAValue = tokenA.toLowerCase() === tokenAddress.toLowerCase() ? tokenAmount : wethAmount;
-    const tokenBValue = tokenB.toLowerCase() === tokenAddress.toLowerCase() ? tokenAmount : wethAmount;
+    const amount0Desired = token0 === tokenAddress ? tokenAmount : wethAmount;
+    const amount1Desired = token1 === tokenAddress ? tokenAmount : wethAmount;
 
-    await router.addLiquidity(
-      tokenA,
-      tokenB,
-      tokenAValue,
-      tokenBValue,
-      0,
-      0,
-      owner.address,
-      deadline
-    );
+    await token.approve(positionManager.target, amount0Desired + amount1Desired);
+    await weth.approve(positionManager.target, amount0Desired + amount1Desired);
+
+    const tickSpacing = Number(await pool.tickSpacing());
+    const tickLower = Math.floor(-600 / tickSpacing) * tickSpacing;
+    const tickUpper = Math.ceil(600 / tickSpacing) * tickSpacing;
+    const deadline = BigInt(await time.latest()) + 3600n;
+
+    await positionManager.mint({
+      token0,
+      token1,
+      fee: poolFee,
+      tickLower,
+      tickUpper,
+      amount0Desired,
+      amount1Desired,
+      amount0Min: 0,
+      amount1Min: 0,
+      recipient: owner.address,
+      deadline,
+    });
   }
 
   async function deployWithSwapLiquidity() {
@@ -234,7 +242,7 @@ describe("E2E Scenarios", function () {
 
   describe("Swaps + Price Feeds", function () {
     it("E2E: Add liquidity, update TWAP, AccessGating uses updated feed without exceeding maxPrice", async () => {
-      const { owner, user1, token, gate, unifeed } = await loadFixture(deployWithTwapLiquidity);
+    const { owner, user1, token, gate, unifeed } = await loadFixture(deployWithTwapLiquidity);
 
       await time.increase(1800);
       await unifeed.update();
@@ -250,40 +258,41 @@ describe("E2E Scenarios", function () {
       expect(await gate.getUserUSD(user1.address)).to.equal(price);
     });
 
-    it("E2E: Router swap (fee-on-transfer) respects amountOutMin and updates balances as expected", async () => {
-      const { user1, token, weth, router, charityVault, stakingVault } = await loadFixture(deployWithSwapLiquidity);
+    it("E2E: Router swap respects amountOutMin and updates balances as expected", async () => {
+      const { user1, token, weth, router, poolFee } = await loadFixture(deployWithSwapLiquidity);
 
       const amountIn = ethers.parseUnits("100000", 18);
-      await token.transfer(user1, amountIn);
+      await token.transfer(user1.address, amountIn);
       await token.connect(user1).approve(router, amountIn);
 
       const deadline = BigInt(await time.latest()) + 1200n;
-      const charityBefore = await token.balanceOf(charityVault);
-      const stakingBefore = await token.balanceOf(stakingVault);
 
       await expect(
-        router.connect(user1).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        router.connect(user1).exactInputSingle({
+          tokenIn: token.target,
+          tokenOut: weth.target,
+          fee: poolFee,
+          recipient: user1.address,
+          deadline,
           amountIn,
-          ethers.parseEther("1"),
-          [token.target, weth.target],
-          user1.address,
-          deadline
-        )
-      ).to.be.revertedWith("Router: INSUFFICIENT_OUTPUT_AMOUNT");
+          amountOutMinimum: ethers.parseEther("1"),
+          sqrtPriceLimitX96: 0,
+        })
+      ).to.be.reverted;
 
       const wethBefore = await weth.balanceOf(user1.address);
-      await router.connect(user1).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await router.connect(user1).exactInputSingle({
+        tokenIn: token.target,
+        tokenOut: weth.target,
+        fee: poolFee,
+        recipient: user1.address,
+        deadline,
         amountIn,
-        0,
-        [token.target, weth.target],
-        user1.address,
-        deadline
-      );
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
       const wethAfter = await weth.balanceOf(user1.address);
       expect(wethAfter).to.be.gt(wethBefore);
-
-      expect(await token.balanceOf(charityVault)).to.be.gt(charityBefore);
-      expect(await token.balanceOf(stakingVault)).to.be.gt(stakingBefore);
     });
   });
 
@@ -309,8 +318,8 @@ describe("E2E Scenarios", function () {
       await expect(stakingVault.connect(user1).stake(stakeAmount, 1)).to.not.be.reverted;
     });
 
-    it("E2E: Tx/wallet limits interact with router and vault fee routing correctly", async () => {
-      const { user1, user2, token, weth, router, pair, charityVault, stakingVault } = await loadFixture(deployWithSwapLiquidity);
+    it("E2E: Tx/wallet limits interact with router and pool exemptions correctly", async () => {
+      const { user1, user2, token, weth, router, pool, poolFee } = await loadFixture(deployWithSwapLiquidity);
 
       // Make wallet limit small enough to hit, and tx limit modest.
       await token.setWalletLimit(ethers.parseUnits("10000001", 18)); // 10,000,001
@@ -322,7 +331,7 @@ describe("E2E Scenarios", function () {
       // Wallet limit should block net incoming to a normal address.
       await expect(token.connect(user1).transfer(user2, ethers.parseUnits("15000000", 18))).to.be.revertedWith("Exceeds max wallet size");
 
-      // Now tighten tx limit; normal transfer should fail, but router swap to pair should still work since pair is limit-exempt.
+      // Now tighten tx limit; normal transfer should fail, but router swap to pool should still work since pool is limit-exempt.
       await token.setTxLimit(ethers.parseUnits("10000001", 18)); // 10,000,001
 
       const amountIn = ethers.parseUnits("20000000", 18); // 20,000,000 > tx limit
@@ -331,26 +340,23 @@ describe("E2E Scenarios", function () {
       const deadline = BigInt(await time.latest()) + 1200n;
       await token.connect(user1).approve(router, amountIn);
 
-      const charityBefore = await token.balanceOf(charityVault);
-      const stakingBefore = await token.balanceOf(stakingVault);
-
       const wethBefore = await weth.balanceOf(user1.address);
-      await router.connect(user1).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+      await router.connect(user1).exactInputSingle({
+        tokenIn: token.target,
+        tokenOut: weth.target,
+        fee: poolFee,
+        recipient: user1.address,
+        deadline,
         amountIn,
-        0,
-        [token.target, weth.target],
-        user1.address,
-        deadline
-      );
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
       const wethAfter = await weth.balanceOf(user1.address);
       expect(wethAfter).to.be.gt(wethBefore);
 
-      // Fee routing should still happen on the token->pair transfer.
-      expect(await token.balanceOf(charityVault)).to.be.gt(charityBefore);
-      expect(await token.balanceOf(stakingVault)).to.be.gt(stakingBefore);
-
-      // Sanity: token->pair transfer bypassed tx limit because pair is excluded from limits.
-      expect(await token.isExcludedFromLimits(pair)).to.equal(true);
+      // Sanity: token->pool transfer bypassed tx limit because pool is excluded from limits.
+      expect(await token.isExcludedFromLimits(pool)).to.equal(true);
+      expect(await token.isExcludedFromFees(pool)).to.equal(true);
     });
   });
 });

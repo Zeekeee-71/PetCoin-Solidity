@@ -25,11 +25,8 @@ module.exports = {
   solidity: {
     compilers: [
       { version: "0.5.16",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-          evmVersion: "istanbul", // Aligns Uniswap V2 init code hash with periphery constant
-        } },
-      { version: "0.6.6",
+        settings: { optimizer: { enabled: true, runs: 200 } } },
+      { version: "0.7.6",
         settings: { optimizer: { enabled: true, runs: 200 } } },
       { version: "0.8.28",
         settings: { optimizer: { enabled: true, runs: 200 } } },

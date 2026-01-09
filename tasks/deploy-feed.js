@@ -1,26 +1,45 @@
 const addressesFor = require("../lib/addresses");
-const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
 
-task("deploy-feed", "Deploy UniswapV2PriceFeed and link to AccessGating")
-  .addOptionalPositionalParam("pair", "Pair address", "")
-  .setAction(async ({pair}, hre) => {
+task("deploy-feed", "Deploy UniswapV3PriceFeed and link to AccessGating")
+  .addOptionalPositionalParam("pool", "Uniswap V3 pool address", "")
+  .addOptionalParam("base", "Base token priced by the feed (defaults to deployed.token)", "")
+  .addOptionalParam("quote", "Quote token (defaults to deployed.weth)", "")
+  .addOptionalParam("fee", "Expected pool fee tier", "")
+  .addOptionalParam("twap", "TWAP interval in seconds", "1800")
+  .addOptionalParam("minLiquidity", "Minimum harmonic mean liquidity", "0")
+  .addOptionalParam("maxTickDeviation", "Max tick delta between updates (0 disables)", "0")
+  .addOptionalParam("cardinality", "Observation cardinality to set on the pool", "0")
+  .setAction(async ({ pool, base, quote, fee, twap, minLiquidity, maxTickDeviation, cardinality }, hre) => {
     const { ethers } = hre;
-    const fs = require("fs");
-    const path = require("path");
 
     const deployed = addressesFor(hre.network.name);
+    const selectedPool = pool || deployed.pool;
 
-    if(!(pair || deployed.pair)) {
-      console.error("❌ No pair found. Please deploy the core contracts first.");
+    if (!selectedPool) {
+      console.error("❌ No pool found. Please deploy the core contracts first or pass --pool <address>.");
       return;
     }
-    console.log(`🚀 Deploying UniswapV2PriceFeed to use pair: ${pair || deployed.pair}`);
 
-    const Feed = await ethers.getContractFactory("UniswapV2PriceFeed");
-    const feed = await Feed.deploy(pair || deployed.pair);
+    const baseToken = base || deployed.token;
+    const quoteToken = quote || deployed.weth;
+    const feeTier = fee ? Number.parseInt(fee, 10) : (deployed.poolFee || 0);
+
+    console.log(`🚀 Deploying UniswapV3PriceFeed for pool: ${selectedPool}`);
+
+    const Feed = await ethers.getContractFactory("UniswapV3PriceFeed");
+    const feed = await Feed.deploy(
+      selectedPool,
+      baseToken,
+      quoteToken,
+      feeTier,
+      Number.parseInt(twap, 10),
+      BigInt(minLiquidity),
+      Number.parseInt(maxTickDeviation, 10),
+      Number.parseInt(cardinality, 10)
+    );
     await feed.waitForDeployment();
 
-    console.log("📡 UniswapV2PriceFeed deployed at:", await feed.target);
+    console.log("📡 UniswapV3PriceFeed deployed at:", await feed.target);
 
     // Wire it into AccessGating
     const gate = await ethers.getContractAt("AccessGating", deployed.gate);
@@ -28,7 +47,5 @@ task("deploy-feed", "Deploy UniswapV2PriceFeed and link to AccessGating")
     await tx.wait();
 
     console.log("🔗 AccessGating updated to use new price feed.");
-
-    console.info("✅ Remember to update deployed.json !!!")
-
+    console.info("✅ Remember to update deployed.json !!!");
   });

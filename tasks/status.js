@@ -17,7 +17,7 @@ task("status", "Get summery stats")
     const treasuryVault = await ethers.getContractAt("TreasuryVault", deployed.treasury);
     const charityVault = await ethers.getContractAt("CharityVault", deployed.charity);
     const stakingVault = await ethers.getContractAt("StakingVault", deployed.staking);
-    const feed = await ethers.getContractAt("MockPriceFeed", deployed.feed);
+    const feed = await ethers.getContractAt("UniswapV3PriceFeed", deployed.feed);
     const gate = await ethers.getContractAt("AccessGating", deployed.gate);
   
     // === Token ===

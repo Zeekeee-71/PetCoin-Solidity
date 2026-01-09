@@ -11,7 +11,7 @@ Companion Network Unit (ticker: `CNU`) is a hybrid utility and charity token des
 - Fund animal rescue and welfare organizations via **automatic fee routing**
 - Reward long-term holders with **staking incentives and tier-based benefits**
 - Provide **on-chain transparency and migration safety** via upgradeable vault logic
-- Back its economy with a **Uniswap-based price oracle** used for access control and valuation
+- Back its economy with a **Uniswap V3-based price oracle** used for access control and valuation
 
 Tokenomics include:
 - 🔥 **0.5% burn**
@@ -32,7 +32,7 @@ This monorepo includes:
 | `TreasuryVault.sol` | Bulk CNU storage for treasury payouts, claims, and migrations          |
 | `StakingVault.sol`   | Multi-stake reward vault with tiered lock durations and finalization   |
 | `CharityVault.sol`   | Donation receiver, distributor, and migratable charity sink            |
-| `UniswapV2PriceFeed.sol` | TWAP-based price oracle for CNU from Uniswap V2 liquidity pool   |
+| `UniswapV3PriceFeed.sol` | TWAP-based price oracle for CNU from a Uniswap V3 pool            |
 | `AccessGating.sol`   | Role-based gating using USD-valued CNU holdings                      |
 
 ### Test Suite
@@ -50,8 +50,8 @@ Powered by **Hardhat** and **Chai**, with deep coverage for:
 Custom `hardhat` tasks for:
 
 - Deploying contracts (`deploy-core`)
-- Creating Uniswap pairs (`create-pair`)
-- Adding liquidity (`add-liquidity`)
+- Creating Uniswap V3 pools (`create-pair`)
+- Adding liquidity via V3 position manager (`add-liquidity`)
 - Wiring price feeds and updating TWAPs (`deploy-feed`, `update-feed`)
 - Checking on-chain state (`status`, `balance`)
 
@@ -94,7 +94,7 @@ For local development, just use local hardhat node!
 npx hardhat deploy-core --network sepolia
 ```
 
-Add a Uniswap pair:
+Add a Uniswap V3 pool:
 
 ```bash
 npx hardhat create-pair --network sepolia
@@ -104,7 +104,7 @@ npx hardhat add-liquidity --network sepolia
 Link and update price feed:
 
 ```bash
-npx hardhat deploy-feed --pair 0xYourPair --network sepolia
+npx hardhat deploy-feed --pool 0xYourPool --network sepolia
 npx hardhat update-feed --network sepolia
 ```
 

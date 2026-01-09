@@ -1,12 +1,5 @@
 const { ethers } = require("hardhat");
 
-function getTokenPair(token, weth) {
-  return token.address < weth.address
-  ? [token.address, weth.address]
-  : [weth.address, token.address];
-}
-
-
 async function deployEcosystem() {
   const [owner, user1, user2, user3, ...rest] = await ethers.getSigners();
 
@@ -37,25 +30,58 @@ async function deployEcosystem() {
   const WethFactory = await ethers.getContractFactory("WETH9");
   const weth = await WethFactory.deploy();
 
-  const FactoryFactory = await ethers.getContractFactory("UniswapV2Factory");
-  const factory = await FactoryFactory.deploy(owner);
+  const v3FactoryArtifact = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
+  const swapRouterArtifact = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
+  const positionManagerArtifact = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
+  const poolArtifact = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json");
 
-  const RouterFactory = await ethers.getContractFactory("LocalRouter");
-  const router = await RouterFactory.deploy(factory, weth);
+  const FactoryFactory = new ethers.ContractFactory(
+    v3FactoryArtifact.abi,
+    v3FactoryArtifact.bytecode,
+    owner
+  );
+  const factory = await FactoryFactory.deploy();
 
-  const tx = await factory.createPair(token, weth);
-  await tx.wait();
+  const swapRouterFactory = new ethers.ContractFactory(
+    swapRouterArtifact.abi,
+    swapRouterArtifact.bytecode,
+    owner
+  );
+  const router = await swapRouterFactory.deploy(factory, weth);
 
-  const pair = await ethers.getContractAt("MockUniswapV2Pair", await factory.getPair(token, weth)); 
-  await token.excludeFromLimits(pair, true);
+  const DescriptorFactory = await ethers.getContractFactory("MockPositionDescriptor");
+  const descriptor = await DescriptorFactory.deploy();
 
-  const UniFeed = await ethers.getContractFactory("UniswapV2PriceFeed");
-  const unifeed = await UniFeed.deploy(pair);
+  const positionManagerFactory = new ethers.ContractFactory(
+    positionManagerArtifact.abi,
+    positionManagerArtifact.bytecode,
+    owner
+  );
+  const positionManager = await positionManagerFactory.deploy(factory, weth, descriptor);
 
-  const [tokenA, tokenB] = token.target < weth.target
-    ? [token.target, weth.target]
-    : [weth.target, token.target];
+  const poolFee = 3000;
+  const createPoolTx = await factory.createPool(token, weth, poolFee);
+  await createPoolTx.wait();
 
+  const poolAddress = await factory.getPool(token, weth, poolFee);
+  const pool = new ethers.Contract(poolAddress, poolArtifact.abi, owner);
+  const sqrtPriceX96 = 2n ** 96n;
+  await pool.initialize(sqrtPriceX96);
+
+  await token.excludeFromLimits(poolAddress, true);
+  await token.excludeFromFees(poolAddress, true);
+
+  const UniFeed = await ethers.getContractFactory("UniswapV3PriceFeed");
+  const unifeed = await UniFeed.deploy(
+    poolAddress,
+    token.target ?? token.address,
+    weth.target ?? weth.address,
+    poolFee,
+    1800,
+    0,
+    0,
+    0
+  );
 
   return {
     owner,
@@ -73,9 +99,9 @@ async function deployEcosystem() {
     factory,
     router,
     weth,
-    pair,
-    tokenA,
-    tokenB,
+    pool,
+    positionManager,
+    poolFee,
   };
 }
 

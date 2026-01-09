@@ -1,6 +1,5 @@
-const { sign } = require("crypto");
 const addressesFor = require("../lib/addresses");
-const { factoryV2ABI, routerV2ABI, pairV2ABI } = require("../lib/uniswap");
+const { factoryV3ABI, routerV3ABI, poolV3ABI, positionManagerV3ABI } = require("../lib/uniswap");
 const fs = require("fs");
 const path = require("path");
 const repl = require("repl");
@@ -31,12 +30,13 @@ task("repl", "Launch interactive Hardhat REPL")
       weth: await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", deployed.weth, deployer),
       charity: await ethers.getContractAt("CharityVault", deployed.charity, deployer),
       staking: await ethers.getContractAt("StakingVault", deployed.staking, deployer),
-      feed: await ethers.getContractAt("UniswapV2PriceFeed", deployed.feed, deployer),
+      feed: await ethers.getContractAt("UniswapV3PriceFeed", deployed.feed, deployer),
       gate: await ethers.getContractAt("AccessGating", deployed.gate, deployer), 
-      // Uniswap V2
-      router: await ethers.getContractAt(routerV2ABI, deployed.UniswapV2Router02, deployer),
-      factory: await ethers.getContractAt(factoryV2ABI, deployed.UniswapV2Factory, deployer),
-      pair: await ethers.getContractAt(pairV2ABI, deployed.pair, deployer),
+      // Uniswap V3
+      router: await ethers.getContractAt(routerV3ABI, deployed.UniswapV3SwapRouter, deployer),
+      factory: await ethers.getContractAt(factoryV3ABI, deployed.UniswapV3Factory, deployer),
+      positionManager: await ethers.getContractAt(positionManagerV3ABI, deployed.UniswapV3PositionManager, deployer),
+      pool: await ethers.getContractAt(poolV3ABI, deployed.pool, deployer),
       // Utilities
       delay: ms => new Promise(res => setTimeout(res, ms))
     };
