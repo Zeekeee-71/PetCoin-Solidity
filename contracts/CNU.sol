@@ -25,6 +25,8 @@ interface IVault {
     function isVault() external view returns (bool);
 }
 
+/// @title CNU
+/// @notice ERC20 token with fee routing, vault migrations, and transfer limits.
 contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
     uint256 private constant FEE_DENOMINATOR = 10000;
 
@@ -76,14 +78,23 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         isExcludedFromLimits[address(this)] = true;
     }
 
+    /**
+     * @notice Return the full history of staking vaults.
+     */
     function getStakingVaultHistory() external view returns (address[] memory) {
         return stakingVaultHistory;
     }
 
+    /**
+     * @notice Return the full history of charity vaults.
+     */
     function getCharityVaultHistory() external view returns (address[] memory) {
         return charityVaultHistory;
     }
 
+    /**
+     * @notice Return the full history of treasury vaults.
+     */
     function getTreasuryVaultHistory() external view returns (address[] memory) {
         return treasuryVaultHistory;
     }
@@ -109,16 +120,25 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit TreasuryVaultHistoryAdded(vault);
     }
 
+    /**
+     * @notice Exempt or include an address in transfer fees.
+     */
     function excludeFromFees(address account, bool excluded) external onlyOwner {
         isExcludedFromFees[account] = excluded;
         emit FeeExclusionUpdated(account, excluded);
     }
 
+    /**
+     * @notice Exempt or include an address in transfer limits.
+     */
     function excludeFromLimits(address account, bool excluded) external onlyOwner {
         isExcludedFromLimits[account] = excluded;
         emit LimitExclusionUpdated(account, excluded);
     }
 
+    /**
+     * @notice Update fee basis points for burns, charity, and rewards.
+     */
     function setFees(uint256 newBurnFee, uint256 newCharityFee, uint256 newRewardsFee) external onlyOwner {
         uint256 totalFeeBps = newBurnFee + newCharityFee + newRewardsFee;
         require(totalFeeBps <= 700, "Total fee exceeds limit");
@@ -138,6 +158,9 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Set the active charity vault and migrate from the previous vault.
+     */
     function setCharityVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid charity vault address");
         require(_vault != charityVault, "Same charity vault address");
@@ -154,6 +177,9 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit CharityVaultUpdated(charityVault);
     }
 
+    /**
+     * @notice Set the active treasury vault and migrate from the previous vault.
+     */
     function setTreasuryVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid treasury vault address");
         require(_vault != treasuryVault, "Same treasury vault address");
@@ -170,6 +196,9 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit TreasuryVaultUpdated(treasuryVault);
     }
 
+    /**
+     * @notice Set the active staking vault and migrate from the previous vault.
+     */
     function setStakingVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid staking vault address");
         require(_vault != stakingVault, "Same staking vault address");
@@ -186,6 +215,9 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit StakingVaultUpdated(stakingVault);
     }
 
+    /**
+     * @notice Configure the maximum wallet balance.
+     */
     function setWalletLimit(uint256 _maxWallet) external onlyOwner {
         require(_maxWallet > 10_000_000 * 10 ** decimals(), "Maximum wallet size too small");
         require(_maxWallet < 50_000_000_000 * 10 ** decimals(), "Maximum wallet size too large");
@@ -193,6 +225,9 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit WalletLimitUpdated(maxWalletSize);
     }
 
+    /**
+     * @notice Configure the maximum transaction amount.
+     */
     function setTxLimit(uint256 _maxTx) external onlyOwner {
         require(_maxTx > 10_000_000 * 10 ** decimals(), "Maximum transaction size too small");
         require(_maxTx < 10_000_000_000 * 10 ** decimals(), "Maximum transaction size too large");
@@ -249,7 +284,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         }
 
         // ---- 4) Apply fees (supply & accounting) ----
-        // Burn reduces total supply (either call _burn or OZ v5 burn path via to=address(0))
+        // Burn reduces total supply
         if (burnAmount > 0) {
             // Equivalent: _burn(from, burnAmount);
             super._update(from, address(0), burnAmount);
@@ -274,11 +309,16 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
     
 
-    // Emergency pause/unpause
+    /**
+     * @notice Pause all token transfers.
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Unpause token transfers.
+     */
     function unpause() external onlyOwner {
         _unpause();
     }

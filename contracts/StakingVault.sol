@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import "./ICNUVaults.sol";
 import "./VaultBase.sol";
 
+/// @title StakingVault
+/// @notice Locks CNU for fixed tiers and tracks rewards/penalties.
 contract StakingVault is VaultBase {
 
     modifier notFinalized() {
@@ -54,6 +56,9 @@ contract StakingVault is VaultBase {
         require(_cnuToken != address(0), "Invalid token");
     }
 
+    /**
+     * @notice Stake CNU into a tiered lockup with fixed reward rate.
+     */
     function stake(uint256 amount, Tier tier) external nonReentrant notPaused notFinalized {
         (uint256 duration, uint256 rate) = getTierParams(tier);
         require(duration > 0, "Invalid tier");
@@ -93,6 +98,9 @@ contract StakingVault is VaultBase {
         emit Staked(msg.sender, stakeId, amount, duration, rate);
     }
 
+    /**
+     * @notice Claim a matured stake and its reward.
+     */
     function claim(uint256 stakeId) external nonReentrant {
         Stake storage s = getUserStake(msg.sender, stakeId);
         require(!s.claimed, "Already claimed");
@@ -115,6 +123,9 @@ contract StakingVault is VaultBase {
         emit Claimed(msg.sender, stakeId, reward);
     }
 
+    /**
+     * @notice Withdraw before maturity and pay the configured penalty.
+     */
     function earlyWithdraw(uint256 stakeId) external nonReentrant {
         Stake storage s = getUserStake(msg.sender, stakeId);
         require(!s.claimed, "Already claimed");
@@ -147,20 +158,32 @@ contract StakingVault is VaultBase {
         emit EarlyWithdrawn(msg.sender, stakeId, toCharity);
     }
 
+    /**
+     * @notice Return earned rewards for a stake if fully matured.
+     */
     function earned(address user, uint256 stakeId) external view returns (uint256) {
         Stake memory s = getUserStake(user, stakeId);
         if (s.claimed || block.timestamp < s.startTime + s.lockDuration) return 0;
         return s.amount * s.rewardRate / 10000;
     }
 
+    /**
+     * @notice Return the number of stakes for a user.
+     */
     function getStakeCount(address user) external view returns (uint256) {
         return userStakes[user].length;
     }
 
+    /**
+     * @notice Return a single stake for a user.
+     */
     function getStake(address user, uint256 stakeId) external view returns (Stake memory) {
         return getUserStake(user, stakeId);
     }
 
+    /**
+     * @notice Return all stakes for a user.
+     */
     function getUserStakes(address user) external view returns (Stake[] memory) {
         return userStakes[user];
     }
@@ -170,6 +193,9 @@ contract StakingVault is VaultBase {
         return userStakes[user][stakeId];
     }
 
+    /**
+     * @notice Return total staked, total rewards earned, and currently claimable amount.
+     */
     function getUserSummary(address user) external view returns (
         uint256 totalStakedAmount,
         uint256 totalRewardsEarned,
@@ -190,6 +216,9 @@ contract StakingVault is VaultBase {
         }
     }
 
+    /**
+     * @notice Return lock duration and reward rate for a tier.
+     */
     function getTierParams(Tier tier) public pure returns (uint256 duration, uint256 rate) {
         if (tier == Tier.THIRTY) return (30 days, 100);         // 1%
         if (tier == Tier.NINETY) return (90 days, 300);         // 3%
@@ -198,9 +227,9 @@ contract StakingVault is VaultBase {
         return (0, 0); // NONE
     }
 
-    // Deprecated: Remove for mainnet
-    // function receiveFee(uint256 amount) external {}
-
+    /**
+     * @notice Return vault-level stats for UI and monitoring.
+     */
     function getVaultStats() external view returns (
         uint256 _totalStaked,
         uint256 _earlyWithdrawPenalty,
@@ -210,11 +239,16 @@ contract StakingVault is VaultBase {
         return (totalStaked, earlyWithdrawPenalty, address(getCharityVault()), stakingPaused);
     }
 
-
+    /**
+     * @notice Return total owed (principal + rewards) for a user.
+     */
     function getUserOwed(address user) external view returns (uint256 total) {
         return userTotalOwed[user];
     }
 
+    /**
+     * @notice Return claimable amount for a range of stake entries.
+     */
     function getUserClaimableNow(address user, uint256 offset, uint256 limit) external view returns (uint256 claimable, uint256 nextOffset) {
         require(limit > 0, "Limit must be > 0");
         require(limit <= 200, "Limit too high");
@@ -236,6 +270,9 @@ contract StakingVault is VaultBase {
         return (claimable, end);
     }
 
+    /**
+     * @notice Return claimable amount across all stakes.
+     */
     function getUserClaimableNowAll(address user) external view returns (uint256 claimable) {
         Stake[] storage stakes = userStakes[user];
         for (uint256 i = 0; i < stakes.length; i++) {
@@ -247,10 +284,16 @@ contract StakingVault is VaultBase {
         }
     }
 
+    /**
+     * @notice Return the current staker list.
+     */
     function getAllStakers() external view returns (address[] memory) {
         return stakerList;
     }
 
+    /**
+     * @notice Return a slice of stakers for pagination.
+     */
     function getStakers(uint256 offset, uint256 limit) external view returns (address[] memory) {
         require(limit > 0, "Limit must be > 0");
         require(limit <= 200, "Limit too high");
@@ -268,26 +311,41 @@ contract StakingVault is VaultBase {
         return result;
     }
 
+    /**
+     * @notice Pause or unpause new staking.
+     */
     function pauseStaking(bool _pause) external onlyOwner {
         stakingPaused = _pause;
         emit StakingPaused(_pause);
     }
 
 
+    /**
+     * @notice Update the early withdrawal penalty (basis points).
+     */
     function setEarlyWithdrawPenalty(uint256 newPenalty) external onlyOwner {
         require(newPenalty <= 2500, "Penalty too high");
         earlyWithdrawPenalty = newPenalty;
         emit PenaltyUpdated(newPenalty);
     }
 
+    /**
+     * @notice Return the total outstanding reward liabilities.
+     */
     function getTotalLiabilities() public view returns (uint256 liabilities) {
         return totalLiabilities;
     }
 
+    /**
+     * @notice Return the reserve required to cover all stakes and rewards.
+     */
     function getVaultObligations() public view returns (uint256 requiredReserve) {
         requiredReserve = totalStaked + getTotalLiabilities();
     }
 
+    /**
+     * @notice Migrate excess funds to a new vault, preserving obligations.
+     */
     function migrateTo(address newVault) external onlyToken notFinalized nonReentrant {
         require(newVault != address(0), "Invalid vault address");
 

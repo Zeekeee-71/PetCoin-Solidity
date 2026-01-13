@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/// @title ICNUVaults
+/// @notice Interface for CNU vault registry lookups.
 interface ICNUVaults {
     function stakingVault() external view returns (address);
     function getStakingVaultHistory() external view returns (address[] memory);

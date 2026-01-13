@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "./VaultBase.sol";
 
+/// @title TreasuryVault
+/// @notice Holds treasury funds and supports controlled withdrawals.
 contract TreasuryVault is VaultBase {
 
     event TreasuryFunded(address indexed from, uint256 amount);

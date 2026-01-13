@@ -8,8 +8,9 @@ interface IERC20Metadata {
     function decimals() external view returns (uint8);
 }
 
-/// @title UniswapV3PriceFeed - TWAP adapter for AccessGating or Vault logic
-/// @notice Tracks a time-weighted average price from a Uniswap V3 pool
+/// @title UniswapV3PriceFeed
+/// @notice Minimal Uniswap V3 TWAP price feed for AccessGating or vault logic.
+/// @dev Returns the base token priced in the quote token, scaled to 18 decimals.
 contract UniswapV3PriceFeed {
     IUniswapV3Pool public immutable pool;
     address public immutable baseToken;
@@ -119,7 +120,7 @@ contract UniswapV3PriceFeed {
         lastUpdateTimestamp = uint32(block.timestamp);
     }
 
-    /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes)
+    /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes).
     function update() external {
         uint256 nowTimestamp = block.timestamp;
         require(nowTimestamp >= lastUpdateTimestamp, "UniswapV3PriceFeed: TIME");
@@ -148,12 +149,12 @@ contract UniswapV3PriceFeed {
         emit Updated(price, meanTick, timeElapsed);
     }
 
-    /// @notice Returns the TWAP-scaled price as a uint256 (18 decimals assumed post-scaling)
+    /// @notice Returns the last TWAP price (base/quote) scaled to 18 decimals.
     function getLatestPrice() external view returns (uint256) {
         return lastPrice;
     }
 
-    /// @notice Returns the time (in seconds) since the last TWAP update
+    /// @notice Returns the time (in seconds) since the last TWAP update.
     function getTimeSinceUpdate() external view returns (uint32) {
         require(block.timestamp >= lastUpdateTimestamp, "UniswapV3PriceFeed: TIME");
         return uint32(block.timestamp - lastUpdateTimestamp);
