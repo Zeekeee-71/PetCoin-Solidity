@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "./VaultBase.sol";
 
+/// @title CharityVault
+/// @notice Stores and disburses charity allocations from CNU fees.
 contract CharityVault is VaultBase {
 
     event VaultFunded(uint256 amount);
@@ -17,6 +19,9 @@ contract CharityVault is VaultBase {
         feeForwarders[_cnuToken] = true;
     }
 
+    /**
+     * @notice Fund the vault directly from an approved account.
+     */
     function fundVault(uint256 amount) external {
         require(cnuToken.transferFrom(msg.sender, address(this), amount), "Funding failed");
         emit VaultFunded(amount);

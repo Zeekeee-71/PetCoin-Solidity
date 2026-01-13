@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// contracts/LocalDeployer.sol
+// Compile-only shim for Uniswap V2 router (solc 0.6.x).
 
 pragma solidity ^0.6.6;
 

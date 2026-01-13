@@ -6,7 +6,8 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/libraries/SafeMath.sol";
 
-/// @dev Lightweight Uniswap V2 router that relies on factory.getPair instead of a hardcoded init code hash.
+/// @title LocalRouter
+/// @notice Minimal Uniswap V2 router that relies on factory.getPair instead of a hardcoded init code hash.
 contract LocalRouter {
     using SafeMath for uint256;
 
@@ -18,6 +19,9 @@ contract LocalRouter {
         WETH = _WETH;
     }
 
+    /**
+     * @notice Add liquidity, creating the pair if needed.
+     */
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -49,6 +53,9 @@ contract LocalRouter {
         liquidity = IUniswapV2Pair(pair).mint(to);
     }
 
+    /**
+     * @notice Swap tokens while supporting fee-on-transfer tokens.
+     */
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,

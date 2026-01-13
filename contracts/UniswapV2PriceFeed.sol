@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title UniswapV2PriceFeed - TWAP adapter for AccessGating or Vault logic
-/// @notice Tracks a time-weighted average price from a Uniswap V2 pair
+/// @title UniswapV2PriceFeed
+/// @notice Minimal Uniswap V2 TWAP price feed for AccessGating or vault logic.
+/// @dev Uses price0 cumulatives (token0 priced in token1), scaled to 18 decimals.
 contract UniswapV2PriceFeed is Ownable {
     IUniswapV2Pair public immutable pair;
 
@@ -36,7 +37,7 @@ contract UniswapV2PriceFeed is Ownable {
         }
     }
 
-    /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes)
+    /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes).
     function update() external {
         (uint256 price0Cumulative, , uint32 blockTimestamp) = currentCumulativePrices();
 
@@ -54,12 +55,12 @@ contract UniswapV2PriceFeed is Ownable {
         lastUpdateTimestamp = blockTimestamp;
     }
 
-    /// @notice Returns the TWAP-scaled price as a uint256 (18 decimals assumed post-scaling)
+    /// @notice Returns the last TWAP price scaled to 18 decimals.
     function getLatestPrice() external view returns (uint256) {
         return (priceAverageUQ112x112 * 1e18) / (2 ** 112);
     }
 
-    /// @notice Returns the time (in seconds) since the last TWAP update
+    /// @notice Returns the time (in seconds) since the last TWAP update.
     function getTimeSinceUpdate() external view returns (uint32) {
         return uint32(block.timestamp) - lastUpdateTimestamp;
     }

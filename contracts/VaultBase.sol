@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/// @title VaultBase
+/// @notice Shared base for CNU vaults with migration support.
 abstract contract VaultBase is Ownable, ReentrancyGuard {
     IERC20 public immutable cnuToken;
 
@@ -17,6 +19,7 @@ abstract contract VaultBase is Ownable, ReentrancyGuard {
         cnuToken = IERC20(_cnuToken);
     }
 
+    /// @dev Transfers the entire vault balance to a new vault during migrations.
     function _migrateAll(address newVault) internal returns (uint256 amount) {
         require(newVault != address(0), "Invalid vault address");
 
@@ -24,8 +27,8 @@ abstract contract VaultBase is Ownable, ReentrancyGuard {
         require(cnuToken.transfer(newVault, amount), "Migration transfer failed");
     }
 
+    /// @notice Identify this contract as a vault for CNU.
     function isVault() external pure returns (bool) {
         return true;
     }
 }
-

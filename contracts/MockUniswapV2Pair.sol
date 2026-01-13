@@ -9,7 +9,8 @@ interface IMinimalUniswapV2Pair {
   function getReserves() external view returns (uint112, uint112, uint32);
 }
 
-/// @dev Test-only mock. Do not deploy to production networks.
+/// @title MockUniswapV2Pair
+/// @notice Test-only mock for Uniswap V2 cumulative pricing.
 contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
   address immutable token0;
   address immutable token1;
@@ -30,29 +31,43 @@ contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
 
 
 
+  /**
+   * @notice Set cumulative price values for testing.
+   */
   function setCumulativePrices(uint256 _price0, uint256 _price1) external onlyOwner {
     price0CumulativeLast = _price0;
     price1CumulativeLast = _price1;
     //blockTimestampLast = uint32(block.timestamp);
   }
 
+  /**
+   * @notice Set reserves for testing.
+   */
   function setReserves(uint112 _reserve0, uint112 _reserve1) external onlyOwner {
     reserve0 = _reserve0;
     reserve1 = _reserve1;
     //blockTimestampLast = uint32(block.timestamp);
   }
 
+  /**
+   * @notice Return reserves and last timestamp.
+   */
   function getReserves() external view returns (uint112, uint112, uint32) {
     return (reserve0, reserve1, blockTimestampLast);
   }
 
-  // Optional: simulate advancing time and cumulative values
+  /**
+   * @notice Advance time and cumulatives with constant rates.
+   */
   function advance(uint32 timeElapsed, uint256 price0Rate, uint256 price1Rate) external onlyOwner {
     price0CumulativeLast += (price0Rate * uint256(timeElapsed)) << 112;
     price1CumulativeLast += (price1Rate * uint256(timeElapsed)) << 112;
     blockTimestampLast = uint32(block.timestamp); // sync to EVM time
   }
 
+  /**
+   * @notice Set timestamp and advance cumulatives to that time.
+   */
   function advanceTo(uint32 toTimestamp, uint256 price0Rate, uint256 price1Rate) external onlyOwner {
     uint32 timeElapsed = toTimestamp - blockTimestampLast;
     price0CumulativeLast += (price0Rate * uint256(timeElapsed)) << 112;
