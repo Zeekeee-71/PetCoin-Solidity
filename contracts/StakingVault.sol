@@ -227,9 +227,6 @@ contract StakingVault is VaultBase {
         return (0, 0); // NONE
     }
 
-    // Deprecated: Remove for mainnet
-    // function receiveFee(uint256 amount) external {}
-
     /**
      * @notice Return vault-level stats for UI and monitoring.
      */
@@ -241,7 +238,6 @@ contract StakingVault is VaultBase {
     ) {
         return (totalStaked, earlyWithdrawPenalty, address(getCharityVault()), stakingPaused);
     }
-
 
     /**
      * @notice Return total owed (principal + rewards) for a user.

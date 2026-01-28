@@ -284,7 +284,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         }
 
         // ---- 4) Apply fees (supply & accounting) ----
-        // Burn reduces total supply (either call _burn or OZ v5 burn path via to=address(0))
+        // Burn reduces total supply
         if (burnAmount > 0) {
             // Equivalent: _burn(from, burnAmount);
             super._update(from, address(0), burnAmount);

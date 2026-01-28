@@ -14,7 +14,7 @@ interface IStakingVaultOwed {
 }
 
 /// @title AccessGating
-/// @notice Computes access tiers based on CNU holdings and a price feed.
+/// @notice Computes access tiers based on CNU holdings and a quote-based price feed.
 contract AccessGating is Ownable {
     IERC20 public immutable cnuToken;
     IPriceFeed public priceFeed; // CNU priced in a configurable quote token (18-decimal scaled)
