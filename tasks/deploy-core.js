@@ -21,29 +21,37 @@ task("deploy-core", "Deploy core contracts")
     console.log(`💰 CNU deployed at: ${token.target}`);
 
     // 1.2. Set Wallet Limit 
-    await token.setWalletLimit(ethers.parseUnits("10000000000", 18)); // Ten Billion in 18 decimals
+    const walletLimitTx = await token.setWalletLimit(ethers.parseUnits("10000000000", 18)); // Ten Billion in 18 decimals
+    await walletLimitTx.wait();
     console.log(`🔒 Wallet limit set`);
 
     // 1.3. Set Transaction Limit 
-    await token.setTxLimit(ethers.parseUnits("1000000000", 18)); // One Billion in 18 decimals
+    const txLimitTx = await token.setTxLimit(ethers.parseUnits("1000000000", 18)); // One Billion in 18 decimals
+    await txLimitTx.wait();
     console.log(`🔒 Transaction limit set`);
 
     // 1.4. Deploy Treasury Vault
     const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
     const treasuryVault = await TreasuryVaultFactory.deploy(token);
-    await token.setTreasuryVault(treasuryVault);
+    await treasuryVault.waitForDeployment();
+    const setTreasuryTx = await token.setTreasuryVault(treasuryVault);
+    await setTreasuryTx.wait();
     console.log(`🏦 TreasuryVault deployed at: ${treasuryVault.target}`);
 
     // 2. Deploy Charity Vault
     const CharityVaultFactory = await ethers.getContractFactory("CharityVault");
     const charityVault = await CharityVaultFactory.deploy(token);
-    await token.setCharityVault(charityVault);
+    await charityVault.waitForDeployment();
+    const setCharityTx = await token.setCharityVault(charityVault);
+    await setCharityTx.wait();
     console.log(`🏦 CharityVault deployed at: ${charityVault.target}`);
 
     // 3. Deploy Staking Vault
     const StakingVaultFactory = await ethers.getContractFactory("StakingVault");
     const stakingVault = await StakingVaultFactory.deploy(token);
-    await token.setStakingVault(stakingVault);
+    await stakingVault.waitForDeployment();
+    const setStakingTx = await token.setStakingVault(stakingVault);
+    await setStakingTx.wait();
     console.log(`🏦 StakingVault deployed at: ${stakingVault.target}`);
 
     // 4. Deploy mock price feed

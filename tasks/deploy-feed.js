@@ -1,4 +1,6 @@
 const addressesFor = require("../lib/addresses");
+const fs = require("fs");
+const path = require("path");
 
 task("deploy-feed", "Deploy UniswapV3PriceFeed and link to AccessGating")
   .addOptionalPositionalParam("pool", "Uniswap V3 pool address", "")
@@ -52,5 +54,11 @@ task("deploy-feed", "Deploy UniswapV3PriceFeed and link to AccessGating")
     await tx.wait();
 
     console.log("🔗 AccessGating updated to use new price feed.");
-    console.info("✅ Remember to update deployed.json !!!");
+
+    deployed.feed = feed.target;
+    const deployedPath = path.join(__dirname, "..", "deployed.json");
+    const full = JSON.parse(fs.readFileSync(deployedPath, "utf8"));
+    full[hre.network.name] = deployed;
+    fs.writeFileSync(deployedPath, JSON.stringify(full, null, 2));
+    console.info("✅ Updated deployed.json.");
   });

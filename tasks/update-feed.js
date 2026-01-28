@@ -17,12 +17,16 @@ task("update-feed", "Calls update() on the UniswapV3PriceFeed contract")
       const tx = await feed.update();
       await tx.wait();
     } catch (e) {
-      console.error("⚠️ Could not update. Likely too soon:", e.message);
+      console.warn("⚠️ Update skipped (mock feed or too soon):", e.message);
     }
 
     const price = await feed.getLatestPrice();
-    const lastUpdate = await feed.getTimeSinceUpdate();
+    console.log(`✔ Current price: ${ethers.formatUnits(price, 18)} (18 decimals)`);
 
-    console.log(`✔ Updated. Current TWAP: ${ethers.formatUnits(price, 18)} (18 decimals)`);
-    console.log(`🕒 Time since update: ${lastUpdate.toString()} seconds`);
+    try {
+      const lastUpdate = await feed.getTimeSinceUpdate();
+      console.log(`🕒 Time since update: ${lastUpdate.toString()} seconds`);
+    } catch (e) {
+      console.warn("ℹ️ Time since update unavailable (likely MockPriceFeed).");
+    }
   });

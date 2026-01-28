@@ -62,7 +62,13 @@ task("status", "Get summery stats")
     // === Oracle ===
     const price = await feed.getLatestPrice();
     const quotePerCnu = Number(price) / 1e18;
-    console.log(`📉 Price: ${quotePerCnu.toFixed(9)} quote / CNU\n`);
+    console.log(`📉 Price: ${quotePerCnu.toFixed(9)} quote / CNU`);
+    try {
+      const lastUpdate = await feed.getTimeSinceUpdate();
+      console.log(`🕒 Time since update: ${lastUpdate.toString()} seconds\n`);
+    } catch (_) {
+      console.log("ℹ️ Time since update unavailable (likely MockPriceFeed).\n");
+    }
   
     // === Gating ===
   

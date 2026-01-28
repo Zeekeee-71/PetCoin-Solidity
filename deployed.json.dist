@@ -31,6 +31,22 @@
     "poolFee": 3000,
     "positionId": ""
   },
+  "chiado": {
+    "token": "",
+    "treasury": "",
+    "charity": "",
+    "staking": "",
+    "feed": "",
+    "gate": "",
+    "UniswapV3Factory": "",
+    "UniswapV3SwapRouter": "",
+    "UniswapV3PositionManager": "",
+    "weth": "",
+    "quote": "",
+    "pool": "",
+    "poolFee": 3000,
+    "positionId": ""
+  },
   "mainnet": {
     "token": "",
     "treasury": "",
