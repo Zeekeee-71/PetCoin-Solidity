@@ -125,7 +125,6 @@ contract AccessGating is Ownable {
         address[] memory vaults = ICNUVaults(address(cnuToken)).getStakingVaultHistory();
         for (uint256 i = 0; i < vaults.length; i++) {
             address vault = vaults[i];
-            if (vault == address(0) || vault.code.length == 0) continue;
             try IStakingVaultOwed(vault).getUserOwed(user) returns (uint256 owed) {
                 stakedOwed += owed;
             } catch {

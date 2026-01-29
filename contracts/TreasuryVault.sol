@@ -29,20 +29,16 @@ contract TreasuryVault is VaultBase {
      * @notice Pay out an approved claim from the treasury.
      */
     function payClaim(address recipient, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
-        require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be > 0");
-
         require(cnuToken.transfer(recipient, amount), "Claim transfer failed");
         emit ClaimPaid(recipient, amount, memo);
     }
 
     /**
-     * @notice Withdraw treasury funds for operations or migrations.
+     * @notice Withdraw treasury funds for operations.
      */
     function withdraw(address to, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
-        require(to != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be > 0");
-
         require(cnuToken.transfer(to, amount), "Withdraw transfer failed");
         emit TreasuryWithdrawn(to, amount, memo);
     }

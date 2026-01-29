@@ -319,14 +319,14 @@ describe("E2E Scenarios", function () {
       const { user1, user2, token, weth, router, pair, charityVault, stakingVault } = await loadFixture(deployWithSwapLiquidity);
 
       // Make wallet limit small enough to hit, and tx limit modest.
-      await token.setWalletLimit(ethers.parseUnits("10000001", 18)); // 10,000,001
-      await token.setTxLimit(ethers.parseUnits("20000000", 18)); // 20,000,000
+      await token.setWalletLimit(ethers.parseUnits("60000001", 18)); // 60,000,001
+      await token.setTxLimit(ethers.parseUnits("100000000", 18)); // 100,000,000
 
-      const initial = ethers.parseUnits("25000000", 18); // 25,000,000
+      const initial = ethers.parseUnits("80000000", 18); // 80,000,000
       await token.transfer(user1, initial);
 
       // Wallet limit should block net incoming to a normal address.
-      await expect(token.connect(user1).transfer(user2, ethers.parseUnits("15000000", 18))).to.be.revertedWith("Exceeds max wallet size");
+      await expect(token.connect(user1).transfer(user2, ethers.parseUnits("70000000", 18))).to.be.revertedWith("Exceeds max wallet size");
 
       // Now tighten tx limit; normal transfer should fail, but router swap to pair should still work since pair is limit-exempt.
       await token.setTxLimit(ethers.parseUnits("10000001", 18)); // 10,000,001

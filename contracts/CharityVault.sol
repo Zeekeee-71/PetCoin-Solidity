@@ -28,14 +28,9 @@ contract CharityVault is VaultBase {
      * Spend funds held in the vault for a charitable recipient.
      */
     function spend(address recipient, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
-        require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be > 0");
-
         IERC20 token = IERC20(cnuToken);
-        uint256 balance = token.balanceOf(address(this));
-        require(amount <= balance, "Insufficient balance");
         require(token.transfer(recipient, amount), "Transfer failed");
-
         emit CharitySpent(recipient, amount, memo);
     }
 
