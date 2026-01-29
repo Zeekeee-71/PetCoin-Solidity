@@ -247,16 +247,13 @@ describe("Companion Network Unit Token contract", function () {
     expect(await token.balanceOf(user2)).to.equal(amount);
   })
 
-  it("Disallows setting maxWalletSize to values out of range", async () => {
+  it("Disallows setting maxWalletSize below minimum", async () => {
     await expect(
       token.setWalletLimit(ethers.parseUnits("0", 18))
     ).to.be.revertedWith("Maximum wallet size too small");
     await expect(
       token.setWalletLimit(ethers.parseUnits("100000", 18))
     ).to.be.revertedWith("Maximum wallet size too small");
-    await expect(
-      token.setWalletLimit(ethers.parseUnits("50000000000", 18))
-    ).to.be.revertedWith("Maximum wallet size too large");
   })
 
   it("Allows setting maxWalletSize to a new value", async () => {
@@ -265,16 +262,13 @@ describe("Companion Network Unit Token contract", function () {
     await expect(token.maxWalletSize() == five_bil)
   })
 
-  it("Disallows setting maxTxSize to values out of range", async () => {
+  it("Disallows setting maxTxSize below minimum", async () => {
     await expect(
       token.setTxLimit(ethers.parseUnits("0", 18))
     ).to.be.revertedWith("Maximum transaction size too small");
     await expect(
       token.setTxLimit(ethers.parseUnits("100000", 18))
     ).to.be.revertedWith("Maximum transaction size too small");
-    await expect(
-      token.setTxLimit(ethers.parseUnits("50000000000", 18))
-    ).to.be.revertedWith("Maximum transaction size too large");
   })
 
   it("Allows setting maxTxSize to a new value", async () => {

@@ -219,8 +219,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
      * @notice Configure the maximum wallet balance.
      */
     function setWalletLimit(uint256 _maxWallet) external onlyOwner {
-        require(_maxWallet > 10_000_000 * 10 ** decimals(), "Maximum wallet size too small");
-        require(_maxWallet < 50_000_000_000 * 10 ** decimals(), "Maximum wallet size too large");
+        require(_maxWallet > 50_000_000 * 10 ** decimals(), "Maximum wallet size too small");
         maxWalletSize = _maxWallet;
         emit WalletLimitUpdated(maxWalletSize);
     }
@@ -230,7 +229,6 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
      */
     function setTxLimit(uint256 _maxTx) external onlyOwner {
         require(_maxTx > 10_000_000 * 10 ** decimals(), "Maximum transaction size too small");
-        require(_maxTx < 10_000_000_000 * 10 ** decimals(), "Maximum transaction size too large");
         maxTxSize = _maxTx;
         emit TxLimitUpdated(maxTxSize);
     }
