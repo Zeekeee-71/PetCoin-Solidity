@@ -194,16 +194,15 @@ contract StakingVault is VaultBase {
     }
 
     /**
-     * @notice Return total staked, total rewards earned, and currently claimable amount.
+     * @notice Return total staked, total rewards expected from those stakes, and the currently claimable amount.
      */
     function getUserSummary(address user) external view returns (
         uint256 totalStakedAmount,
-        uint256 totalRewardsEarned,
+        uint256 totalRewardsExpected,
         uint256 claimableNow
     ) {
         totalStakedAmount = userTotalStaked[user];
-        totalRewardsEarned = userTotalRewards[user];
-
+        totalRewardsExpected = userTotalRewards[user];
         Stake[] storage stakes = userStakes[user];
         for (uint256 i = 0; i < stakes.length; i++) {
             Stake storage s = stakes[i];

@@ -195,10 +195,10 @@ In addition to transaction-based rewards, Pet Coin AI will implement a
 staking program in Phase 2, offering enhanced rewards for holders who
 commit to locking their tokens for specified periods:
 
-- **30-Day Staking:** Additional 2% APY
-- **90-Day Staking:** Additional 5% APY
-- **180-Day Staking:** Additional 10% APY
-- **365-Day Staking:** Additional 15% APY
+- **30-Day Staking:** Additional 1% fixed reward for the lock period
+- **90-Day Staking:** Additional 3% fixed reward for the lock period
+- **180-Day Staking:** Additional 7% fixed reward for the lock period
+- **365-Day Staking:** Additional 15% fixed reward for the lock period
 
 ### Loyalty Tiers
 
@@ -380,4 +380,3 @@ Together, we can create a future where blockchain technology serves as a
 powerful force for positive change, channeling resources to those who
 need it most---including our beloved animal companions who cannot speak
 for themselves.
-

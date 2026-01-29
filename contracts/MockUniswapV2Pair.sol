@@ -12,8 +12,8 @@ interface IMinimalUniswapV2Pair {
 /// @title MockUniswapV2Pair
 /// @notice Test-only mock for Uniswap V2 cumulative pricing.
 contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
-  address immutable token0;
-  address immutable token1;
+  address immutable token0Address;
+  address immutable token1Address;
 
   uint256 public price0CumulativeLast;
   uint256 public price1CumulativeLast;
@@ -24,11 +24,18 @@ contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
   constructor(address _token0, address _token1) Ownable(msg.sender) {
     require(_token0 != address(0), "Token0 must be set");
     require(_token1 != address(0), "Token1 must be set");
-    token0 = _token0;
-    token1 = _token1;
+    token0Address = _token0;
+    token1Address = _token1;
     blockTimestampLast = uint32(block.timestamp);
   }
 
+  function token0() external view returns (address) {
+    return token0Address;
+  }
+
+  function token1() external view returns (address) {
+    return token1Address;
+  }
 
 
   /**

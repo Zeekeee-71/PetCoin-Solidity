@@ -12,11 +12,8 @@ contract CharityVault is VaultBase {
     event CharityFundsMigrated(address indexed to, uint256 amount);
     event CharitySpent(address indexed recipient, uint256 amount, string memo);
 
-    mapping(address => bool) public feeForwarders;
-
     constructor(address _cnuToken) VaultBase(_cnuToken) {
         require(_cnuToken != address(0), "Invalid token address");
-        feeForwarders[_cnuToken] = true;
     }
 
     /**

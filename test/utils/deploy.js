@@ -49,9 +49,6 @@ async function deployEcosystem() {
   const pair = await ethers.getContractAt("MockUniswapV2Pair", await factory.getPair(token, weth)); 
   await token.excludeFromLimits(pair, true);
 
-  const UniFeed = await ethers.getContractFactory("UniswapV2PriceFeed");
-  const unifeed = await UniFeed.deploy(pair);
-
   const [tokenA, tokenB] = token.target < weth.target
     ? [token.target, weth.target]
     : [weth.target, token.target];
@@ -69,7 +66,6 @@ async function deployEcosystem() {
     stakingVault,
     gate,
     feed,
-    unifeed,
     factory,
     router,
     weth,

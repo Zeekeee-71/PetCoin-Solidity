@@ -43,7 +43,13 @@ describe("E2E Scenarios", function () {
     const tokenAmount = ethers.parseUnits("10000", 18); // 10k CNU
     const wethAmount = ethers.parseEther("10"); // 10 WETH
     await addLiquidity(ecosystem, tokenAmount, wethAmount);
-    return ecosystem;
+    const UniFeed = await ethers.getContractFactory("UniswapV2PriceFeed");
+    const pairAddress = ecosystem.pair.target ?? ecosystem.pair.address;
+    const tokenAddress = ecosystem.token.target ?? ecosystem.token.address;
+    const wethAddress = ecosystem.weth.target ?? ecosystem.weth.address;
+    const unifeed = await UniFeed.deploy(pairAddress, tokenAddress, wethAddress);
+    await unifeed.waitForDeployment();
+    return { ...ecosystem, unifeed };
   }
 
   describe("Staking + AccessGating", function () {
