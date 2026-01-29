@@ -33,7 +33,7 @@ This monorepo includes:
 | `StakingVault.sol`   | Multi-stake reward vault with tiered lock durations and finalization   |
 | `CharityVault.sol`   | Donation receiver, distributor, and migratable charity sink            |
 | `UniswapV2PriceFeed.sol` | TWAP-based price oracle for CNU from Uniswap V2 liquidity pool   |
-| `AccessGating.sol`   | Role-based gating using USD-valued CNU holdings                      |
+| `AccessGating.sol`   | Role-based gating using quote-valued CNU holdings                    |
 
 ### Test Suite
 
@@ -112,9 +112,9 @@ npx hardhat update-feed --network sepolia
 
 ## 📊 Governance and Access
 
-CNU holders receive **Access Tiers** based on their USD-equivalent holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
+CNU holders receive **Access Tiers** based on their quote-asset holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
 
-| Tier     | Threshold (USD) |
+| Tier     | Threshold (quote) |
 | -------- | --------------- |
 | CLUB     | \$1             |
 | SILVER   | \$100           |

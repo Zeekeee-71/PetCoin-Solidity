@@ -21,11 +21,11 @@ contract AccessGating is Ownable {
 
     enum Tier { NONE, CLUB, SILVER, GOLD, PLATINUM, DIAMOND }
 
-    mapping(Tier => uint256) public usdThresholds;
+    mapping(Tier => uint256) public quoteThresholds;
 
     uint256 public maxPrice = 1_000_000 * 1e18;
 
-    event ThresholdUpdated(Tier tier, uint256 usdAmount);
+    event ThresholdUpdated(Tier tier, uint256 quoteAmount);
     event PriceFeedUpdated(address newFeed);
     event MaxPriceUpdated(uint256 maxPrice);
 
@@ -36,31 +36,31 @@ contract AccessGating is Ownable {
         priceFeed = IPriceFeed(_priceFeed);
 
         // Default quote-denominated thresholds (18 decimals).
-        usdThresholds[Tier.NONE] = 0;
-        usdThresholds[Tier.CLUB] = 1; // Any amount > 0, even one wei
-        usdThresholds[Tier.SILVER] = 100 * 1e18;
-        usdThresholds[Tier.GOLD] = 500 * 1e18;
-        usdThresholds[Tier.PLATINUM] = 1_000 * 1e18;
-        usdThresholds[Tier.DIAMOND] = 10_000 * 1e18;
+        quoteThresholds[Tier.NONE] = 0;
+        quoteThresholds[Tier.CLUB] = 1; // Any amount > 0, even one wei
+        quoteThresholds[Tier.SILVER] = 100 * 1e18;
+        quoteThresholds[Tier.GOLD] = 500 * 1e18;
+        quoteThresholds[Tier.PLATINUM] = 1_000 * 1e18;
+        quoteThresholds[Tier.DIAMOND] = 10_000 * 1e18;
     }
 
     /**
      * @notice Update the threshold for a tier in quote token units (18 decimals).
      */
-    function setThreshold(Tier tier, uint256 amountUSD18) external onlyOwner {
+    function setThreshold(Tier tier, uint256 amountQuote18) external onlyOwner {
         require(tier > Tier.CLUB && tier <= Tier.DIAMOND, "Invalid tier");
         // Validate reasonable bounds (e.g., 5 to 1,000,000 in quote units)
-        require(amountUSD18 >= 5 * 1e18 && amountUSD18 <= 1_000_000 * 1e18, "Threshold out of bounds");
+        require(amountQuote18 >= 5 * 1e18 && amountQuote18 <= 1_000_000 * 1e18, "Threshold out of bounds");
 
         for (uint256 i = uint256(Tier.CLUB); i < uint256(tier); i++) {
-            require(amountUSD18 > usdThresholds[Tier(i)], "Must be higher than lower tiers");
+            require(amountQuote18 > quoteThresholds[Tier(i)], "Must be higher than lower tiers");
         }
         for (uint256 i = uint256(tier) + 1; i <= uint256(Tier.DIAMOND); i++) {
-            require(amountUSD18 < usdThresholds[Tier(i)], "Must be lower than higher tiers");
+            require(amountQuote18 < quoteThresholds[Tier(i)], "Must be lower than higher tiers");
         }
 
-        usdThresholds[tier] = amountUSD18;
-        emit ThresholdUpdated(tier, amountUSD18);
+        quoteThresholds[tier] = amountQuote18;
+        emit ThresholdUpdated(tier, amountQuote18);
     }
 
     /**
@@ -92,13 +92,13 @@ contract AccessGating is Ownable {
      * @notice Return the current tier based on wallet balance + owed staking rewards.
      */
     function getTier(address user) public view returns (Tier) {
-        uint256 usdValue = getUserUSD(user);
+        uint256 quoteValue = getUserValue(user);
 
-        if (usdValue >= usdThresholds[Tier.DIAMOND]) return Tier.DIAMOND;
-        if (usdValue >= usdThresholds[Tier.PLATINUM]) return Tier.PLATINUM;
-        if (usdValue >= usdThresholds[Tier.GOLD]) return Tier.GOLD;
-        if (usdValue >= usdThresholds[Tier.SILVER]) return Tier.SILVER;
-        if (usdValue >= usdThresholds[Tier.CLUB]) return Tier.CLUB;
+        if (quoteValue >= quoteThresholds[Tier.DIAMOND]) return Tier.DIAMOND;
+        if (quoteValue >= quoteThresholds[Tier.PLATINUM]) return Tier.PLATINUM;
+        if (quoteValue >= quoteThresholds[Tier.GOLD]) return Tier.GOLD;
+        if (quoteValue >= quoteThresholds[Tier.SILVER]) return Tier.SILVER;
+        if (quoteValue >= quoteThresholds[Tier.CLUB]) return Tier.CLUB;
         return Tier.NONE;
     }
 
@@ -112,10 +112,10 @@ contract AccessGating is Ownable {
     /**
      * @notice Compute the user's total position value in quote token units.
      */
-    function getUserUSD(address user) public view returns (uint256 usdValue) {
+    function getUserValue(address user) public view returns (uint256 quoteValue) {
         uint256 balance = cnuToken.balanceOf(user); // 18 decimals
         uint256 stakedOwed = getUserStakedOwed(user);
-        return getUSD(balance + stakedOwed);
+        return getQuoteValue(balance + stakedOwed);
     }
 
     /**
@@ -137,9 +137,9 @@ contract AccessGating is Ownable {
     /**
      * @notice Convert a CNU amount to quote token value using the feed.
      */
-    function getUSD(uint256 amount) public view returns (uint256 usdValue) {
+    function getQuoteValue(uint256 amount) public view returns (uint256 quoteValue) {
         uint256 price = priceFeed.getLatestPrice();
         require(price > 0 && price <= maxPrice, "Invalid price");
-        usdValue = (amount * price) / 1e18;
+        quoteValue = (amount * price) / 1e18;
     }
 }

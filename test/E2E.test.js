@@ -250,10 +250,10 @@ describe("E2E Scenarios", function () {
       expect(price).to.be.lte(await gate.maxPrice());
 
       await gate.connect(owner).setPriceFeed(unifeed);
-      expect(await gate.getUSD(ethers.parseUnits("1", 18))).to.equal(price);
+      expect(await gate.getQuoteValue(ethers.parseUnits("1", 18))).to.equal(price);
 
       await token.transfer(user1, ethers.parseUnits("1", 18));
-      expect(await gate.getUserUSD(user1.address)).to.equal(price);
+      expect(await gate.getUserValue(user1.address)).to.equal(price);
     });
 
     it("E2E: Router swap (fee-on-transfer) respects amountOutMin and updates balances as expected", async () => {

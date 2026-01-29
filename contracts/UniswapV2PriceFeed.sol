@@ -55,15 +55,20 @@ contract UniswapV2PriceFeed is Ownable {
     /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes).
     function update() external {
         (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) = currentCumulativePrices();
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast;
+        uint32 timeElapsed;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast;
+        }
 
         emit DebugTimeElapsed(blockTimestamp, blockTimestampLast, timeElapsed);
 
 
         require(timeElapsed >= MIN_UPDATE_INTERVAL, "UniswapV2PriceFeed: TOO_SOON");
 
-        price0AverageUQ112x112 = (price0Cumulative - price0CumulativeLast) / timeElapsed;
-        price1AverageUQ112x112 = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+        unchecked {
+            price0AverageUQ112x112 = (price0Cumulative - price0CumulativeLast) / timeElapsed;
+            price1AverageUQ112x112 = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+        }
 
         price0CumulativeLast = price0Cumulative;
         price1CumulativeLast = price1Cumulative;
@@ -101,13 +106,17 @@ contract UniswapV2PriceFeed is Ownable {
         uint32 timeElapsed
     ) {
         (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) = currentCumulativePrices();
-        timeElapsed = blockTimestamp - blockTimestampLast;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast;
+        }
         if (timeElapsed == 0) {
             return (price0AverageUQ112x112, price1AverageUQ112x112, timeElapsed);
         }
 
-        price0Average = (price0Cumulative - price0CumulativeLast) / timeElapsed;
-        price1Average = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+        unchecked {
+            price0Average = (price0Cumulative - price0CumulativeLast) / timeElapsed;
+            price1Average = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+        }
     }
 
     /// @dev Returns current cumulative prices and block timestamp
@@ -123,15 +132,20 @@ contract UniswapV2PriceFeed is Ownable {
         blockTimestamp = uint32(block.timestamp);
 
         if (blockTimestampLastPair != blockTimestamp) {
-            uint32 timeElapsed = blockTimestamp - blockTimestampLastPair;
+            uint32 timeElapsed;
+            unchecked {
+                timeElapsed = blockTimestamp - blockTimestampLastPair;
+            }
 
             require(reserve0 > 0 && reserve1 > 0, "UniswapV2PriceFeed: NO_RESERVES");
 
             uint256 price0Delta = uint256(UQ112x112.uqdiv(UQ112x112.encode(reserve1), reserve0)) * uint256(timeElapsed);
             uint256 price1Delta = uint256(UQ112x112.uqdiv(UQ112x112.encode(reserve0), reserve1)) * uint256(timeElapsed);
 
-            price0Cumulative += price0Delta;
-            price1Cumulative += price1Delta;
+            unchecked {
+                price0Cumulative += price0Delta;
+                price1Cumulative += price1Delta;
+            }
         }
     }
 }

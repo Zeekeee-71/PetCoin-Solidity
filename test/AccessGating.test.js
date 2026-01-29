@@ -19,7 +19,7 @@ describe("AccessGating", function () {
       await expect(gate.setThreshold(1, 1)).to.be.revertedWith("Invalid tier");
     });
 
-    it("Returns correct tier based on token value in USD", async () => {
+    it("Returns correct tier based on token value in quote asset", async () => {
 
       await feed.setPrice(ethers.parseUnits("2", 18)); // $2.00
 
@@ -28,9 +28,9 @@ describe("AccessGating", function () {
       await gate.setThreshold(4, ethers.parseUnits("1000", 18));
       await gate.setThreshold(5, ethers.parseUnits("10000", 18));
 
-      // Value of 10 tokens @ $2 = $20
+      // Value of 10 tokens @ 2 quote = 20 quote
       const amount = ethers.parseUnits("10", 18);
-      expect(await gate.getUSD(amount)).to.equal(ethers.parseUnits("20", 18));
+      expect(await gate.getQuoteValue(amount)).to.equal(ethers.parseUnits("20", 18));
 
       await token.transfer(user1, amount);
 
@@ -60,12 +60,12 @@ describe("AccessGating", function () {
       expect(tier).to.equal(5); // max tier
     });
 
-    it("Correctly handles edge rounding on USD value to tier threshold", async () => {
-      // Set threshold for SILVER at $100
+    it("Correctly handles edge rounding on quote value to tier threshold", async () => {
+      // Set threshold for SILVER at 100 quote units
       await gate.setThreshold(2, ethers.parseUnits("100", 18));
     
-      // Set price so that 49.9999 tokens is just under $100
-      await feed.setPrice(ethers.parseUnits("2", 18)); // $2.00
+      // Set price so that 49.9999 tokens is just under 100 quote units
+      await feed.setPrice(ethers.parseUnits("2", 18)); // 2 quote units
     
       const almostSilver = ethers.parseUnits("49.9999", 18);
       await token.transfer(user1, almostSilver);
@@ -81,7 +81,7 @@ describe("AccessGating", function () {
       const priceFeed = await PriceFeedFactory.deploy();
       await gate.setPriceFeed(priceFeed);
       await priceFeed.setPrice(0);  // set to zero
-      await expect(gate.getUserUSD(user1)).to.be.revertedWith("Invalid price");
+      await expect(gate.getUserValue(user1)).to.be.revertedWith("Invalid price");
     });
 
     

@@ -60,9 +60,9 @@ task("status", "Get summery stats")
     console.log(`   Staking: ${ethers.formatEther(stakingBal)} CNU\n`);
   
     // === Oracle ===
-    const price= await feed.getLatestPrice();
-    const usd = Number(price) / 1e18;
-    console.log(`📉 Price: $${usd.toFixed(9)} / CNU\n`);
+    const price = await feed.getLatestPrice();
+    const quoteValue = Number(price) / 1e18;
+    console.log(`📉 Price: ${quoteValue.toFixed(9)} quote / CNU\n`);
   
     // === Gating ===
   
@@ -73,8 +73,8 @@ task("status", "Get summery stats")
   
   
     for (let i = 1; i <= 5; i++) {
-      const val = await gate.usdThresholds(i);
-      console.log(`   ${tiers[i]}: $${ethers.formatUnits(val, 18)}`);
+      const val = await gate.quoteThresholds(i);
+      console.log(`   ${tiers[i]}: ${ethers.formatUnits(val, 18)} quote`);
     }
 
   });
