@@ -33,15 +33,15 @@ contract StakingVault is VaultBase {
     mapping(address => uint256) public activeStakeCount;
     mapping(address => uint256) public userTotalStaked;
     mapping(address => uint256) public userTotalRewards;
-    mapping(address => uint256) public userTotalOwed;
+    mapping(address => uint256) public userTotalOwed; // principal + rewards across active stakes
     mapping(address => uint256) private stakerIndex;
     address[] public stakerList;
 
     uint256 public totalStaked;
-    uint256 public totalLiabilities;
+    uint256 public totalLiabilities; // total rewards owed across all stakes
     bool public stakingPaused = false;
     uint256 public earlyWithdrawPenalty = 1000; // 10% penalty
-    bool public isFinalized = false;
+    bool public isFinalized = false; // prevents new stakes/migration; redirects rewards on early withdraw
     
     event Staked(address indexed user, uint256 stakeId, uint256 amount, uint256 duration, uint256 rewardRate);
     event Claimed(address indexed user, uint256 stakeId, uint256 reward);
@@ -67,6 +67,7 @@ contract StakingVault is VaultBase {
         require(amount <= type(uint256).max / rate, "Stake amount too large");
 
         uint256 reward = (amount * rate) / 10000;
+        // Ensure the vault can cover existing obligations plus this new reward.
         uint256 balance = cnuToken.balanceOf(address(this));
         require(balance >= totalStaked + totalLiabilities + reward, "Insufficient reward reserves");
         totalLiabilities += reward;
@@ -140,6 +141,7 @@ contract StakingVault is VaultBase {
         bool finalized = isFinalized;
         uint256 toCharity = penalty;
         if (finalized) {
+            // After migration finalization, redirect rewards to charity as well.
             toCharity += reward;
         }
 
@@ -348,6 +350,7 @@ contract StakingVault is VaultBase {
     function migrateTo(address newVault) external onlyToken notFinalized nonReentrant {
         require(newVault != address(0), "Invalid vault address");
 
+        // Finalize to prevent additional staking while obligations are preserved.
         isFinalized = true;
 
         IERC20 token = cnuToken;
@@ -387,6 +390,7 @@ contract StakingVault is VaultBase {
             stakerIndex[lastUser] = index;
         }
 
+        // Swap-and-pop to keep stakerList dense.
         stakerList.pop();
         delete stakerIndex[user];
         isStaker[user] = false;

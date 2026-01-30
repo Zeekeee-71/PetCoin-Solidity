@@ -13,7 +13,7 @@ task("create-pair", "Creates the CNU/WETH pair on Uniswap")
     const deployed = addressesFor(hre.network.name);
 
     const factory = await ethers.getContractAt(factoryV2ABI, deployed.UniswapV2Factory);
-    //const token = await ethers.getContractAt("CNU", deployed.token;
+    //const token = await ethers.getContractAt("CNU", deployed.token);
     //const weth = await ethers.getContractAt("IWETH", deployed.weth);
 
     const pair = await factory.getPair(deployed.token, deployed.weth);

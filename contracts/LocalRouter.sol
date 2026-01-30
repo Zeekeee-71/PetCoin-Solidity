@@ -75,6 +75,7 @@ contract LocalRouter {
 
     // --- internal helpers ---
 
+    // Uses balance checks to support fee-on-transfer tokens.
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal {
         for (uint256 i; i < path.length - 1; i++) {
             address input = path[i];
@@ -87,6 +88,7 @@ contract LocalRouter {
                 (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pair).getReserves();
                 uint256 reserveInput = input == token0 ? reserve0 : reserve1;
                 uint256 reserveOutput = input == token0 ? reserve1 : reserve0;
+                // Amount in is whatever arrived in the pair after fees.
                 uint256 amountInput = IERC20(input).balanceOf(pair).sub(reserveInput);
                 amountOutput = getAmountOut(amountInput, reserveInput, reserveOutput);
             }
@@ -113,6 +115,7 @@ contract LocalRouter {
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
+            // Constrain to the current pool ratio, favoring the desired amounts.
             uint256 amountBOptimal = quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
                 require(amountBOptimal >= amountBMin, "Router: INSUFFICIENT_B_AMOUNT");

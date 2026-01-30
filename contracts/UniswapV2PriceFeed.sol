@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title UniswapV2PriceFeed
 /// @notice Minimal Uniswap V2 TWAP price feed for AccessGating or vault logic.
@@ -14,14 +15,17 @@ contract UniswapV2PriceFeed is Ownable {
     address public immutable baseToken;
     address public immutable quoteToken;
     bool public immutable baseIsToken0;
+    uint8 public immutable token0Decimals;
+    uint8 public immutable token1Decimals;
 
     uint256 public price0CumulativeLast;
     uint256 public price1CumulativeLast;
     uint32 public blockTimestampLast;
-    uint256 public price0AverageUQ112x112;
-    uint256 public price1AverageUQ112x112;
-    uint32 public lastUpdateTimestamp;
+    uint256 public price0AverageUQ112x112; // UQ112x112 fixed-point average
+    uint256 public price1AverageUQ112x112; // UQ112x112 fixed-point average
+    uint32 public lastUpdateTimestamp; // timestamp of last successful update()
 
+    /// @dev Emitted for debugging time deltas between updates.
     event DebugTimeElapsed(uint256 blockTimestamp, uint256 blockTimestampLast, uint256 timeElapsed);
 
     uint32 public constant MIN_UPDATE_INTERVAL = 1800; // 30 minutes
@@ -34,6 +38,8 @@ contract UniswapV2PriceFeed is Ownable {
         pair = IUniswapV2Pair(_pair);
         token0 = pair.token0();
         token1 = pair.token1();
+        token0Decimals = _safeDecimals(token0);
+        token1Decimals = _safeDecimals(token1);
 
         bool isToken0Pair = _baseToken == token0 && _quoteToken == token1;
         bool isToken1Pair = _baseToken == token1 && _quoteToken == token0;
@@ -62,7 +68,7 @@ contract UniswapV2PriceFeed is Ownable {
 
         emit DebugTimeElapsed(blockTimestamp, blockTimestampLast, timeElapsed);
 
-
+        // Enforce a minimum interval to smooth volatility.
         require(timeElapsed >= MIN_UPDATE_INTERVAL, "UniswapV2PriceFeed: TOO_SOON");
 
         unchecked {
@@ -78,20 +84,26 @@ contract UniswapV2PriceFeed is Ownable {
 
     /// @notice Returns the latest TWAP price (counterfactual since last update) scaled to 18 decimals.
     function getLatestPrice() external view returns (uint256) {
-        (uint256 price0Average, uint256 price1Average, ) = currentAverages();
-        uint256 average = baseIsToken0 ? price0Average : price1Average;
-        return (average * 1e18) / (2 ** 112);
+        return _consult(baseToken, 1e18);
     }
 
     /// @notice Returns the amount out for a given token amount based on the TWAP.
     function consult(address token, uint256 amountIn) external view returns (uint256 amountOut) {
+        return _consult(token, amountIn);
+    }
+
+    function _consult(address token, uint256 amountIn) internal view returns (uint256 amountOut) {
         if (token == token0) {
             (uint256 price0Average, , ) = currentAverages();
-            return (price0Average * amountIn) / (2 ** 112);
+            uint256 scaledIn = _scaleAmount(amountIn, 18, token0Decimals);
+            uint256 rawOut = (price0Average * scaledIn) / (2 ** 112);
+            return _scaleAmount(rawOut, token1Decimals, 18);
         }
         require(token == token1, "UniswapV2PriceFeed: INVALID_TOKEN");
         (, uint256 price1Average, ) = currentAverages();
-        return (price1Average * amountIn) / (2 ** 112);
+        uint256 scaledInB = _scaleAmount(amountIn, 18, token1Decimals);
+        uint256 rawOutB = (price1Average * scaledInB) / (2 ** 112);
+        return _scaleAmount(rawOutB, token0Decimals, 18);
     }
 
     /// @notice Returns the time (in seconds) since the last TWAP update.
@@ -132,6 +144,7 @@ contract UniswapV2PriceFeed is Ownable {
         blockTimestamp = uint32(block.timestamp);
 
         if (blockTimestampLastPair != blockTimestamp) {
+            // Compute counterfactual cumulatives since last pair update.
             uint32 timeElapsed;
             unchecked {
                 timeElapsed = blockTimestamp - blockTimestampLastPair;
@@ -146,6 +159,23 @@ contract UniswapV2PriceFeed is Ownable {
                 price0Cumulative += price0Delta;
                 price1Cumulative += price1Delta;
             }
+        }
+    }
+
+    function _scaleAmount(uint256 amount, uint8 fromDecimals, uint8 toDecimals) internal pure returns (uint256) {
+        if (fromDecimals == toDecimals) return amount;
+        if (fromDecimals < toDecimals) {
+            return amount * (10 ** (toDecimals - fromDecimals));
+        }
+        return amount / (10 ** (fromDecimals - toDecimals));
+    }
+
+    function _safeDecimals(address token) internal view returns (uint8) {
+        if (token.code.length == 0) return 18;
+        try IERC20Metadata(token).decimals() returns (uint8 dec) {
+            return dec;
+        } catch {
+            return 18;
         }
     }
 }

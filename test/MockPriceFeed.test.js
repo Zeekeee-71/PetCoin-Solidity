@@ -12,22 +12,22 @@ describe("MockPriceFeed", function () {
   });
 
   it("Returns the price that was set", async () => {
-    await feed.setPrice(133700000n); // $1.337
-    expect(await feed.getLatestPrice()).to.equal("133700000");
+    await feed.setPrice(ethers.parseUnits("1.337", 18));
+    expect(await feed.getLatestPrice()).to.equal(ethers.parseUnits("1.337", 18));
   });
 
   it("Supports multiple updates and overwrites correctly", async () => {
-    await feed.setPrice("100000000"); // $1.00
-    await feed.setPrice("420000000"); // $4.20
-    expect(await feed.getLatestPrice()).to.equal("420000000");
+    await feed.setPrice(ethers.parseUnits("1", 18));
+    await feed.setPrice(ethers.parseUnits("4.2", 18));
+    expect(await feed.getLatestPrice()).to.equal(ethers.parseUnits("4.2", 18));
   });
 
   it("Allows zero or extreme values for testing purposes", async () => {
     await feed.setPrice(0);
     expect(await feed.getLatestPrice()).to.equal(0);
 
-    await feed.setPrice("999999999999"); // $10M+ in 8 decimals
-    expect(await feed.getLatestPrice()).to.equal("999999999999");
+    await feed.setPrice(ethers.parseUnits("10000000", 18)); // 10M quote units
+    expect(await feed.getLatestPrice()).to.equal(ethers.parseUnits("10000000", 18));
   });
 
 });

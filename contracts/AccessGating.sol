@@ -7,6 +7,7 @@ import "./ICNUVaults.sol";
 
 interface IPriceFeed {
     function getLatestPrice() external view returns (uint256);
+    function consult(address token, uint256 amountIn) external view returns (uint256 amountOut);
 }
 
 interface IStakingVaultOwed {
@@ -21,13 +22,11 @@ contract AccessGating is Ownable {
 
     enum Tier { NONE, CLUB, SILVER, GOLD, PLATINUM, DIAMOND }
 
+    /// @notice Quote-denominated thresholds per tier (18 decimals).
     mapping(Tier => uint256) public quoteThresholds;
-
-    uint256 public maxPrice = 1_000_000 * 1e18;
 
     event ThresholdUpdated(Tier tier, uint256 quoteAmount);
     event PriceFeedUpdated(address newFeed);
-    event MaxPriceUpdated(uint256 maxPrice);
 
     constructor(address _cnuToken, address _priceFeed) Ownable(msg.sender) {
         require(_cnuToken != address(0), "Invalid token");
@@ -46,15 +45,15 @@ contract AccessGating is Ownable {
 
     /**
      * @notice Update the threshold for a tier in quote token units (18 decimals).
+     * @dev Tier.NONE and Tier.CLUB are fixed by the constructor.
      */
     function setThreshold(Tier tier, uint256 amountQuote18) external onlyOwner {
         require(tier > Tier.CLUB && tier <= Tier.DIAMOND, "Invalid tier");
-        // Validate reasonable bounds (e.g., 5 to 1,000,000 in quote units)
-        require(amountQuote18 >= 5 * 1e18 && amountQuote18 <= 1_000_000 * 1e18, "Threshold out of bounds");
 
+        // Ensure strictly increasing thresholds by tier.
         for (uint256 i = uint256(Tier.CLUB); i < uint256(tier); i++) {
             require(amountQuote18 > quoteThresholds[Tier(i)], "Must be higher than lower tiers");
-        }
+        } 
         for (uint256 i = uint256(tier) + 1; i <= uint256(Tier.DIAMOND); i++) {
             require(amountQuote18 < quoteThresholds[Tier(i)], "Must be lower than higher tiers");
         }
@@ -70,22 +69,13 @@ contract AccessGating is Ownable {
         require(newFeed != address(0), "Invalid feed");
         require(newFeed.code.length > 0, "Feed must be a contract");
         // validate
-        try IPriceFeed(newFeed).getLatestPrice() returns (uint256 price) {
-            require(price > 0, "Invalid price from feed");
+        try IPriceFeed(newFeed).consult(address(cnuToken), 1e18) returns (uint256 quotePerToken) {
+            require(quotePerToken > 0, "Invalid price from feed");
         } catch {
             revert("Invalid price feed interface");
         }
         priceFeed = IPriceFeed(newFeed);
         emit PriceFeedUpdated(newFeed);
-    }
-
-    /**
-     * @notice Cap the max acceptable price from the feed (18 decimals).
-     */
-    function setMaxPrice(uint256 newMaxPrice) external onlyOwner {
-        require(newMaxPrice > 0, "Invalid max price");
-        maxPrice = newMaxPrice;
-        emit MaxPriceUpdated(newMaxPrice);
     }
 
     /**
@@ -120,6 +110,7 @@ contract AccessGating is Ownable {
 
     /**
      * @notice Sum owed staking amounts across all known staking vaults.
+     * @dev Ignores vaults that do not implement the expected interface.
      */
     function getUserStakedOwed(address user) public view returns (uint256 stakedOwed) {
         address[] memory vaults = ICNUVaults(address(cnuToken)).getStakingVaultHistory();
@@ -135,10 +126,12 @@ contract AccessGating is Ownable {
 
     /**
      * @notice Convert a CNU amount to quote token value using the feed.
+     * @dev consult() is called with 18-decimal CNU amounts and returns quote token units.
      */
     function getQuoteValue(uint256 amount) public view returns (uint256 quoteValue) {
-        uint256 price = priceFeed.getLatestPrice();
-        require(price > 0 && price <= maxPrice, "Invalid price");
-        quoteValue = (amount * price) / 1e18;
+        uint256 quotePerToken = priceFeed.consult(address(cnuToken), 1e18);
+        require(quotePerToken > 0, "Invalid price");
+        if (amount == 0) return 0;
+        return priceFeed.consult(address(cnuToken), amount);
     }
 }

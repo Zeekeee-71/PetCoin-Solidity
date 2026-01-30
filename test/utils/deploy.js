@@ -12,7 +12,7 @@ async function deployEcosystem() {
 
   const MockFeedFactory = await ethers.getContractFactory("MockPriceFeed");
   const feed = await MockFeedFactory.deploy();
-  await feed.setPrice(10000); 
+  await feed.setPrice(ethers.parseUnits("1", 18));
 
   const TokenFactory = await ethers.getContractFactory("CNU");
   const token = await TokenFactory.deploy(ethers.parseUnits("1000000000000", 18));

@@ -18,6 +18,7 @@ contract CharityVault is VaultBase {
 
     /**
      * @notice Fund the vault directly from an approved account.
+     * @dev Requires an allowance from msg.sender.
      */
     function fundVault(uint256 amount) external {
         require(cnuToken.transferFrom(msg.sender, address(this), amount), "Funding failed");
@@ -25,7 +26,8 @@ contract CharityVault is VaultBase {
     }
 
     /**
-     * Spend funds held in the vault for a charitable recipient.
+     * @notice Spend funds held in the vault for a charitable recipient.
+     * @dev Relies on the token to enforce balance and recipient validity.
      */
     function spend(address recipient, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
         require(amount > 0, "Amount must be > 0");

@@ -27,6 +27,7 @@ contract TreasuryVault is VaultBase {
 
     /**
      * @notice Pay out an approved claim from the treasury.
+     * @dev Relies on the token to enforce balance and recipient validity.
      */
     function payClaim(address recipient, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
         require(amount > 0, "Amount must be > 0");
@@ -36,6 +37,7 @@ contract TreasuryVault is VaultBase {
 
     /**
      * @notice Withdraw treasury funds for operations.
+     * @dev Relies on the token to enforce balance and recipient validity.
      */
     function withdraw(address to, uint256 amount, string calldata memo) external onlyOwner nonReentrant {
         require(amount > 0, "Amount must be > 0");

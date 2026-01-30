@@ -28,7 +28,7 @@ interface IVault {
 /// @title CNU
 /// @notice ERC20 token with fee routing, vault migrations, and transfer limits.
 contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
-    uint256 private constant FEE_DENOMINATOR = 10000;
+    uint256 private constant FEE_DENOMINATOR = 10000; // 100% in basis points
 
     uint256 public charityFee = 100;    // 1%
     uint256 public burnFee = 50;        // 0.5%
@@ -150,6 +150,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit FeesUpdated(burnFee, charityFee, rewardsFee);
     }
 
+    /// @dev Best-effort interface check to prevent non-vault upgrades.
     function isVault(address _maybeVault) internal view returns (bool) {
         try IVault(_maybeVault).isVault() returns (bool result) {
             return result;
@@ -217,6 +218,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Configure the maximum wallet balance.
+     * @dev Only enforces a minimum; owner must choose a reasonable cap.
      */
     function setWalletLimit(uint256 _maxWallet) external onlyOwner {
         require(_maxWallet > 50_000_000 * 10 ** decimals(), "Maximum wallet size too small");
@@ -226,6 +228,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Configure the maximum transaction amount.
+     * @dev Only enforces a minimum; owner must choose a reasonable cap.
      */
     function setTxLimit(uint256 _maxTx) external onlyOwner {
         require(_maxTx > 10_000_000 * 10 ** decimals(), "Maximum transaction size too small");
@@ -259,6 +262,7 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
 
         uint256 burnAmount    = (amount * burnFee)    / FEE_DENOMINATOR;
         uint256 charityAmount = (amount * charityFee) / FEE_DENOMINATOR;
+        // Assign any rounding remainder to rewards so totals always balance.
         uint256 rewardsAmount = feeAmount - burnAmount - charityAmount;
 
         uint256 transferAmount = amount - feeAmount;

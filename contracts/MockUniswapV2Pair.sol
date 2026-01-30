@@ -65,6 +65,7 @@ contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
 
   /**
    * @notice Advance time and cumulatives with constant rates.
+   * @dev Rates are unscaled prices; converted to UQ112x112 internally.
    */
   function advance(uint32 timeElapsed, uint256 price0Rate, uint256 price1Rate) external onlyOwner {
     price0CumulativeLast += (price0Rate * uint256(timeElapsed)) << 112;
@@ -74,6 +75,7 @@ contract MockUniswapV2Pair is IMinimalUniswapV2Pair, Ownable {
 
   /**
    * @notice Set timestamp and advance cumulatives to that time.
+   * @dev Rates are unscaled prices; converted to UQ112x112 internally.
    */
   function advanceTo(uint32 toTimestamp, uint256 price0Rate, uint256 price1Rate) external onlyOwner {
     uint32 timeElapsed = toTimestamp - blockTimestampLast;
