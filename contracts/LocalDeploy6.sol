@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Compile-only shim for Uniswap V2 router (solc 0.6.x).
 
 pragma solidity ^0.6.6;

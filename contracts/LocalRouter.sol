@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity =0.6.6;
 
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";

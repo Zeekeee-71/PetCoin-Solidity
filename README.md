@@ -1,6 +1,6 @@
 # Companion Network Unit (CNU)
 
-**Companion Network Unit (CNU)** is a purpose-driven ERC-20 token and staking ecosystem built on Ethereum (and tested on Sepolia) that combines blockchain technology with meaningful real-world impact. Every transaction supports animal welfare through automatic donations, burns, and user rewards. This repo contains the core Solidity contracts, test suite, deployment tools, and Uniswap integration code for the project.
+**Companion Network Unit (CNU)** is a purpose-driven ERC-20 token and staking ecosystem built on Ethereum (and tested on Hardhat) that combines blockchain technology with meaningful real-world impact. Every transaction supports animal welfare through automatic donations, burns, and user rewards. This repo contains the core Solidity contracts, test suite, deployment tools, and Uniswap integration code for the project.
 
 ---
 
@@ -63,7 +63,7 @@ Custom `hardhat` tasks for:
 
 ```bash
 npm install
-````
+```
 
 ### Build & Compile Contracts
 
@@ -77,36 +77,35 @@ npx hardhat compile
 npx hardhat test
 ```
 
-### Deploy to Sepolia
+### Deploy to Hardhat
 
-Configure `.env`:
-
-```env
-SEPOLIA_RPC_URL=https://...
-PRIVATE_WALLET_KEY=0x...
-```
-
-Then: 
-For local development, just use local hardhat node!
-(don't specifiy the network)
+For local development, use Hardhat:
 
 ```bash
-npx hardhat deploy-core --network sepolia
+npx hardhat node
+```
+
+Then in another terminal:
+
+```bash
+npx hardhat deploy-core --network hardhat
 ```
 
 Add a Uniswap pair:
 
 ```bash
-npx hardhat create-pair --network sepolia
-npx hardhat add-liquidity --network sepolia
+npx hardhat create-pair --network hardhat
+npx hardhat add-liquidity --network hardhat
 ```
 
 Link and update price feed:
 
 ```bash
-npx hardhat deploy-feed --pair 0xYourPair --network sepolia
-npx hardhat update-feed --network sepolia
+npx hardhat deploy-feed 0xYourPair --network hardhat
+npx hardhat update-feed --network hardhat
 ```
+
+`deployed.json` is a critical part of deployment phasing and must be kept accurate at every step; treat updates to it as production-sensitive state.
 
 ---
 
@@ -114,13 +113,13 @@ npx hardhat update-feed --network sepolia
 
 CNU holders receive **Access Tiers** based on their quote-asset holdings using Uniswap TWAP pricing. These tiers can unlock app features, community tools, or governance votes in future phases.
 
-| Tier     | Threshold (quote) |
-| -------- | --------------- |
-| CLUB     | \$1             |
-| SILVER   | \$100           |
-| GOLD     | \$500           |
-| PLATINUM | \$1,000         |
-| DIAMOND  | \$10,000        |
+| Tier     | Threshold (illustrative via USD) |
+| -------- | ---------------- |
+| CLUB     | $1               |
+| SILVER   | $100             |
+| GOLD     | $500             |
+| PLATINUM | $1,000           |
+| DIAMOND  | $10,000          |
 
 ---
 
@@ -134,7 +133,8 @@ Please open issues or pull requests, and feel free to reach out with proposals.
 
 ## 📜 License
 
-MIT license — see `LICENSE` file.
+Apache-2.0 license — see `LICENSE` file.
+Third-party dependencies may include source files under different SPDX identifiers and licenses; those remain under their original terms.
 
 ---
 

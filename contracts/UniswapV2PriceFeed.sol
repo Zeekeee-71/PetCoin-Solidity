@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";

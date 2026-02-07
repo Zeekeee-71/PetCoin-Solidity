@@ -1,5 +1,6 @@
 {
   "name": "hardhat-project",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/n17r4m/CNU.git"
