@@ -2,13 +2,12 @@
 pragma solidity ^0.8.20;
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title UniswapV2PriceFeed
 /// @notice Minimal Uniswap V2 TWAP price feed for AccessGating or vault logic.
 /// @dev Uses price0/price1 cumulatives, scaled to 18 decimals.
-contract UniswapV2PriceFeed is Ownable {
+contract UniswapV2PriceFeed {
     IUniswapV2Pair public immutable pair;
     address public immutable token0;
     address public immutable token1;
@@ -23,14 +22,14 @@ contract UniswapV2PriceFeed is Ownable {
     uint32 public blockTimestampLast;
     uint256 public price0AverageUQ112x112; // UQ112x112 fixed-point average
     uint256 public price1AverageUQ112x112; // UQ112x112 fixed-point average
-    uint32 public lastUpdateTimestamp; // timestamp of last successful update()
-
+    uint32 public lastAverageDuration; // updated duration of the last average
+    
     /// @dev Emitted for debugging time deltas between updates.
     event DebugTimeElapsed(uint256 blockTimestamp, uint256 blockTimestampLast, uint256 timeElapsed);
 
     uint32 public constant MIN_UPDATE_INTERVAL = 1800; // 30 minutes
 
-    constructor(address _pair, address _baseToken, address _quoteToken) Ownable(msg.sender) {
+    constructor(address _pair, address _baseToken, address _quoteToken) {
         require(_pair != address(0), "UniswapV2PriceFeed: INVALID_PAIR");
         require(_baseToken != address(0) && _quoteToken != address(0), "UniswapV2PriceFeed: INVALID_TOKEN");
         require(_baseToken != _quoteToken, "UniswapV2PriceFeed: SAME_TOKEN");
@@ -55,7 +54,6 @@ contract UniswapV2PriceFeed is Ownable {
         (uint112 reserve0, uint112 reserve1, uint32 timestamp) = pair.getReserves();
         require(reserve0 > 0 && reserve1 > 0, "UniswapV2PriceFeed: NO_RESERVES");
         blockTimestampLast = timestamp;
-        lastUpdateTimestamp = timestamp;
     }
 
     /// @notice Updates the TWAP price. Should be called periodically (e.g., every 30+ minutes).
@@ -79,7 +77,7 @@ contract UniswapV2PriceFeed is Ownable {
         price0CumulativeLast = price0Cumulative;
         price1CumulativeLast = price1Cumulative;
         blockTimestampLast = blockTimestamp;
-        lastUpdateTimestamp = blockTimestamp;
+        lastAverageDuration = timeElapsed;
     }
 
     /// @notice Returns the latest TWAP price (counterfactual since last update) scaled to 18 decimals.
@@ -94,13 +92,13 @@ contract UniswapV2PriceFeed is Ownable {
 
     function _consult(address token, uint256 amountIn) internal view returns (uint256 amountOut) {
         if (token == token0) {
-            (uint256 price0Average, , ) = currentAverages();
+            (uint256 price0Average,) = currentAverages();
             uint256 scaledIn = _scaleAmount(amountIn, 18, token0Decimals);
             uint256 rawOut = (price0Average * scaledIn) / (2 ** 112);
             return _scaleAmount(rawOut, token1Decimals, 18);
         }
         require(token == token1, "UniswapV2PriceFeed: INVALID_TOKEN");
-        (, uint256 price1Average, ) = currentAverages();
+        (, uint256 price1Average) = currentAverages();
         uint256 scaledInB = _scaleAmount(amountIn, 18, token1Decimals);
         uint256 rawOutB = (price1Average * scaledInB) / (2 ** 112);
         return _scaleAmount(rawOutB, token0Decimals, 18);
@@ -108,26 +106,36 @@ contract UniswapV2PriceFeed is Ownable {
 
     /// @notice Returns the time (in seconds) since the last TWAP update.
     function getTimeSinceUpdate() external view returns (uint32) {
-        return uint32(block.timestamp) - lastUpdateTimestamp;
+        return uint32(block.timestamp) - blockTimestampLast;
     }
 
     /// @dev Returns current TWAP averages since the last update, or stored averages if no time elapsed.
     function currentAverages() internal view returns (
         uint256 price0Average,
-        uint256 price1Average,
-        uint32 timeElapsed
+        uint256 price1Average
     ) {
         (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) = currentCumulativePrices();
+        uint32 timeElapsed;
         unchecked {
             timeElapsed = blockTimestamp - blockTimestampLast;
         }
+        
         if (timeElapsed == 0) {
-            return (price0AverageUQ112x112, price1AverageUQ112x112, timeElapsed);
+            return (price0AverageUQ112x112, price1AverageUQ112x112);
         }
 
         unchecked {
-            price0Average = (price0Cumulative - price0CumulativeLast) / timeElapsed;
-            price1Average = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+            uint256 price0DeltaAvg = (price0Cumulative - price0CumulativeLast) / timeElapsed;
+            uint256 price1DeltaAvg = (price1Cumulative - price1CumulativeLast) / timeElapsed;
+
+            // Before the first successful update(), there is no stored average window to blend.
+            if (lastAverageDuration == 0) {
+                return (price0DeltaAvg, price1DeltaAvg);
+            }
+
+            uint256 totalDuration = uint256(lastAverageDuration) + uint256(timeElapsed);
+            price0Average = (price0AverageUQ112x112 * uint256(lastAverageDuration) + price0DeltaAvg * uint256(timeElapsed)) / totalDuration;
+            price1Average = (price1AverageUQ112x112 * uint256(lastAverageDuration) + price1DeltaAvg * uint256(timeElapsed)) / totalDuration;
         }
     }
 
