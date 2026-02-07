@@ -144,13 +144,14 @@ Pet Coin AI prioritizes security through several measures:
 ### Token Distribution
 
 Pet Coin AI has a total supply of 1,000,000,000,000 (1 trillion) PETAI
-tokens, distributed as follows:
+tokens, distributed roughly as follows:
 
 - **Public Sale:** 40% (400 billion tokens)
-- **Liquidity Pool:** 15% (200 billion tokens)
+- **Liquidity Pool:** 15% (150 billion tokens)
 - **Development Fund:** 10% (100 billion tokens)
 - **Marketing:** 10% (100 billion tokens)
 - **Team:** 10% (100 billion tokens, vested over 1 year)
+- **Legal:** 10% (100 billion tokens, as needed)
 - **Charity Wallet:** 5% (50 billion tokens, initial seeding)
 
 ### Transaction Fee Structure
