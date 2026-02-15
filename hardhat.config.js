@@ -42,13 +42,31 @@ module.exports = {
         balance: "1000000000000000000000" // 1000 ETH
       }
     },
-//    sepolia: {
-//      url: process.env.SEPOLIA_RPC_URL,
-//      accounts: [
-//        process.env.PRIVATE_WALLET_KEY,  // First key, required
-//        process.env.PRIVATE_WALLET_KEY2, // Optional second key
-//        process.env.PRIVATE_WALLET_KEY3  // Optional third key
-//      ],
-//    },
+
+    gnosis: {
+      url: "https://rpc.gnosischain.com",
+      accounts: [
+        process.env.PRIVATE_WALLET_KEY,  // First key, required
+        process.env.PRIVATE_WALLET_KEY2, // Optional second key
+        process.env.PRIVATE_WALLET_KEY3  // Optional third key
+      ],
+    },
+    chiado: {
+      url: "https://rpc.chiadochain.net",
+      accounts: [
+        process.env.PRIVATE_WALLET_KEY,  // First key, required
+        process.env.PRIVATE_WALLET_KEY2, // Optional second key
+        process.env.PRIVATE_WALLET_KEY3  // Optional third key
+      ],
+    },
+
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL,
+      accounts: [
+        process.env.PRIVATE_WALLET_KEY,  // First key, required
+        process.env.PRIVATE_WALLET_KEY2, // Optional second key
+        process.env.PRIVATE_WALLET_KEY3  // Optional third key
+      ],
+    },
   },
 };

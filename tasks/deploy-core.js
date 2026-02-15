@@ -8,12 +8,20 @@ task("deploy-core", "Deploy core contracts")
     const fs = require("fs");
     const path = require("path");
     const network = hre.network.name;
+    
+    console.log(`Deploying to ${network}`);
+    
     const deployedPath = path.join(__dirname, "..", "deployed.json"); //  don't use addressFor() here,
     const deployedRaw = fs.readFileSync(deployedPath, "utf8");        //  we need the path and
     const deployed = JSON.parse(deployedRaw)[hre.network.name];          //  existing should be overwritten
 
     console.log(`🚀 Deploying contracts from: ${signer.address}`);
 
+	const signer_balance = await ethers.provider.getBalance(signer.address);
+
+    console.log(`🚀 Balance: ${ethers.formatEther(signer_balance)}`);
+
+	
     // 1. Deploy CNU token
     const TokenFactory = await ethers.getContractFactory("CNU");
     const token = await TokenFactory.deploy(ethers.parseUnits("1000000000000", 18));
