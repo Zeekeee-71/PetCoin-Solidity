@@ -16,6 +16,9 @@ require("./tasks/balance");
 require("./tasks/exclude");
 require("./tasks/swap-in");
 require("./tasks/swap-out");
+require("./tasks/treasury-spend");
+require("./tasks/treasury-fund");
+require("./tasks/deploy-splitbuy");
 
 console.info("Hardhat config loaded");
 
@@ -43,7 +46,7 @@ module.exports = {
       }
     },
 
-    gnosis: {
+/*    gnosis: {
       url: "https://rpc.gnosischain.com",
       accounts: [
         process.env.PRIVATE_WALLET_KEY,  // First key, required
@@ -59,8 +62,8 @@ module.exports = {
         process.env.PRIVATE_WALLET_KEY3  // Optional third key
       ],
     },
-
-    sepolia: {
+*/
+/*    sepolia: {
       url: process.env.SEPOLIA_RPC_URL,
       accounts: [
         process.env.PRIVATE_WALLET_KEY,  // First key, required
@@ -68,5 +71,6 @@ module.exports = {
         process.env.PRIVATE_WALLET_KEY3  // Optional third key
       ],
     },
+*/
   },
 };
