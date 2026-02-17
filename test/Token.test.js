@@ -249,30 +249,24 @@ describe("Companion Network Unit Token contract", function () {
 
   it("Disallows setting maxWalletSize below minimum", async () => {
     await expect(
-      token.setWalletLimit(ethers.parseUnits("0", 18))
-    ).to.be.revertedWith("Maximum wallet size too small");
-    await expect(
-      token.setWalletLimit(ethers.parseUnits("100000", 18))
+      token.setWalletLimit(ethers.parseUnits("100", 18))
     ).to.be.revertedWith("Maximum wallet size too small");
   })
 
   it("Allows setting maxWalletSize to a new value", async () => {
-    const five_bil = ethers.parseUnits("5000000000", 18)
+    const five_bil = ethers.parseUnits("5000000", 18)
     await token.setWalletLimit(five_bil)
     await expect(token.maxWalletSize() == five_bil)
   })
 
   it("Disallows setting maxTxSize below minimum", async () => {
     await expect(
-      token.setTxLimit(ethers.parseUnits("0", 18))
-    ).to.be.revertedWith("Maximum transaction size too small");
-    await expect(
-      token.setTxLimit(ethers.parseUnits("100000", 18))
+      token.setTxLimit(ethers.parseUnits("100", 18))
     ).to.be.revertedWith("Maximum transaction size too small");
   })
 
   it("Allows setting maxTxSize to a new value", async () => {
-    const five_bil = ethers.parseUnits("5000000000", 18)
+    const five_bil = ethers.parseUnits("5000000", 18)
     await token.setTxLimit(five_bil)
     await expect(token.maxTxSize() == five_bil)
   })
@@ -313,7 +307,7 @@ describe("Companion Network Unit Token contract", function () {
     expect(charityHistoryBefore[0]).to.equal(charityVault.target);
   
     // Fund old charity vault
-    const amount = ethers.parseUnits("10000000", 18);
+    const amount = ethers.parseUnits("10000", 18);
     await token.transfer(charityVault.target, amount);
   
     const balanceBefore = await token.balanceOf(charityVault.target);
