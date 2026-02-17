@@ -19,6 +19,7 @@ require("./tasks/swap-out");
 require("./tasks/treasury-spend");
 require("./tasks/treasury-fund");
 require("./tasks/deploy-splitbuy");
+require("./tasks/set-allowed-token");
 
 console.info("Hardhat config loaded");
 
