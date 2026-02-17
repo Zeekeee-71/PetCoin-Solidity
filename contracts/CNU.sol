@@ -69,8 +69,8 @@ contract CNU is ERC20, Ownable, Pausable, ReentrancyGuard {
     event TxLimitUpdated(uint256 txLimit);
     event WalletLimitUpdated(uint256 walletLimit);
 
-    constructor(uint256 initialSupply) ERC20("Companion Network Unit", "CNU") Ownable(msg.sender) {
-        // uint256 initialSupply = 1_000_000_000_000 * 10 ** decimals(); // 1 trillion
+    constructor(uint256 initialSupply) ERC20("PetCoin AI", "CNU") Ownable(msg.sender) {
+        // uint256 initialSupply = 1_000_000_000 * 10 ** decimals(); // 1 trillion
         _mint(msg.sender, initialSupply);
         isExcludedFromFees[msg.sender] = true;
         isExcludedFromFees[address(this)] = true;

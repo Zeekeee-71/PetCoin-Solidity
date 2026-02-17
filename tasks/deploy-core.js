@@ -24,17 +24,17 @@ task("deploy-core", "Deploy core contracts")
 	
     // 1. Deploy CNU token
     const TokenFactory = await ethers.getContractFactory("CNU");
-    const token = await TokenFactory.deploy(ethers.parseUnits("1000000000000", 18));
+    const token = await TokenFactory.deploy(ethers.parseUnits("1000000000", 18));
     await token.waitForDeployment();
     console.log(`💰 CNU deployed at: ${token.target}`);
 
     // 1.2. Set Wallet Limit 
-    const walletLimitTx = await token.setWalletLimit(ethers.parseUnits("10000000000", 18)); // Ten Billion in 18 decimals
+    const walletLimitTx = await token.setWalletLimit(ethers.parseUnits("10000000", 18)); // Ten Billion in 18 decimals
     await walletLimitTx.wait();
     console.log(`🔒 Wallet limit set`);
 
     // 1.3. Set Transaction Limit 
-    const txLimitTx = await token.setTxLimit(ethers.parseUnits("1000000000", 18)); // One Billion in 18 decimals
+    const txLimitTx = await token.setTxLimit(ethers.parseUnits("1000000", 18)); // One Billion in 18 decimals
     await txLimitTx.wait();
     console.log(`🔒 Transaction limit set`);
 
